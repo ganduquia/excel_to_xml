@@ -22,7 +22,8 @@ module Taxes
       withholding_lines = WithholdingCalculator.new(document).call
 
       ActiveRecord::Base.transaction do
-        document.tax_lines.destroy_all
+        # Evita caché de asociación — borra directo por FK
+        TaxLine.where(tax_document_id: document.id).destroy_all
 
         (iva_lines + withholding_lines).each(&:save!)
 

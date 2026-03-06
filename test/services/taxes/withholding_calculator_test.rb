@@ -111,9 +111,11 @@ class Taxes::WithholdingCalculatorTest < ActiveSupport::TestCase
     lines = Taxes::WithholdingCalculator.new(@document.reload).call
     rete = lines.find { |l| l.tax_type == "retefuente" }
 
-    # Base solo sobre $3,000,000 (excluido no entra)
-    assert_equal 30_000_000_00 * 4 / 100, rete.base_cents * 4 / 100
-    assert_equal 30_000_000, rete.base_cents
+    # ítem gravado: unit_price = 3_000_000_00 cents = $3,000,000 COP
+    # ítem excluido NO entra en base → base = 300_000_000 cents
+    # retención = 300_000_000 * 4% = 12_000_000 cents = $120,000 COP
+    assert_equal 300_000_000, rete.base_cents
+    assert_equal  12_000_000, rete.amount_cents
   end
 
   test "calculation_detail tiene campos de auditoría normativa" do

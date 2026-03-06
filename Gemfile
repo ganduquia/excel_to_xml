@@ -5,6 +5,9 @@ ruby "3.2.2"
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 7.1.0"
 
+# minitest 6.x cambió la firma de run y es incompatible con Rails 7.1
+gem "minitest", "~> 5.18"
+
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
 gem "sprockets-rails"
 

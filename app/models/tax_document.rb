@@ -67,7 +67,8 @@ class TaxDocument < ApplicationRecord
   end
 
   def cannot_modify_cancelled_document
-    return unless persisted? && cancelled?
+    # status_was: valor persistido en BD (antes del cambio en memoria)
+    return unless persisted? && status_was == "cancelled"
     errors.add(:base, "No se puede modificar un documento cancelado")
   end
 end
