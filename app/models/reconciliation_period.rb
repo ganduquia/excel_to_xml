@@ -15,21 +15,30 @@ class ReconciliationPeriod < ApplicationRecord
     reconciliation_items.count
   end
 
+  # Solo cuenta Auxiliares para el progreso de revisión
+  def auxiliar_items
+    reconciliation_items.where(account_type: "Auxiliar")
+  end
+
   def pending_count
-    reconciliation_items.where(review_status: "pending").count
+    auxiliar_items.where(review_status: "pending").count
   end
 
   def reviewed_count
-    reconciliation_items.where(review_status: "reviewed").count
+    auxiliar_items.where(review_status: "reviewed").count
+  end
+
+  def auxiliar_count
+    auxiliar_items.count
   end
 
   def completion_percentage
-    return 0 if items_count.zero?
-    (reviewed_count.to_f / items_count * 100).round
+    return 0 if auxiliar_count.zero?
+    (reviewed_count.to_f / auxiliar_count * 100).round
   end
 
   def approvable?
-    items_count > 0 && pending_count.zero?
+    auxiliar_count > 0 && pending_count.zero?
   end
 
   def editable?

@@ -25,10 +25,12 @@ module Taxes
     end
 
     def show
-      @items = @period.reconciliation_items.order(:account_code)
+      @items = @period.reconciliation_items.order(
+        Arel.sql("LENGTH(account_code) ASC, account_code ASC")
+      )
       @items = apply_filter(@items)
 
-      @stats = build_stats
+      @stats        = build_stats
       @editing_item = load_editing_item
     end
 
@@ -103,26 +105,31 @@ module Taxes
 
     def apply_filter(scope)
       case params[:filter]
-      when "pending"        then scope.where(review_status: "pending")
-      when "with_effect"    then scope.where(has_fiscal_effect: true)
-      when "without_effect" then scope.where(has_fiscal_effect: false)
-      when "deferred"       then scope.where(applies_deferred_tax: true)
-      else scope
+      when "auxiliar_pending"
+        scope.where(account_type: "Auxiliar", review_status: "pending")
+      when "auxiliar_effect"
+        scope.where(account_type: "Auxiliar", has_fiscal_effect: true)
+             .where.not(fiscal_adjustment_cents: 0)
+      when "auxiliar_deferred"
+        scope.where(account_type: "Auxiliar", applies_deferred_tax: true)
+      else
+        scope
       end
     end
 
     def build_stats
-      all = @period.reconciliation_items
+      all  = @period.reconciliation_items
+      aux  = all.where(account_type: "Auxiliar")
       {
         total:          all.count,
-        pending:        all.where(review_status: "pending").count,
-        reviewed:       all.where(review_status: "reviewed").count,
-        with_effect:    all.where(has_fiscal_effect: true).count,
-        without_effect: all.where(has_fiscal_effect: false).count,
-        with_deferred:  all.where(applies_deferred_tax: true).count,
-        total_adj:      all.sum(:fiscal_adjustment_cents),
-        deferred_asset: all.where(deferred_tax_classification: "asset").sum(:deferred_tax_amount_cents),
-        deferred_liab:  all.where(deferred_tax_classification: "liability").sum(:deferred_tax_amount_cents)
+        auxiliar_total: aux.count,
+        pending:        aux.where(review_status: "pending").count,
+        reviewed:       aux.where(review_status: "reviewed").count,
+        with_effect:    aux.where(has_fiscal_effect: true).count,
+        without_effect: aux.where(has_fiscal_effect: false).count,
+        with_deferred:  aux.where(applies_deferred_tax: true).count,
+        deferred_asset: aux.where(deferred_tax_classification: "asset").sum(:deferred_tax_amount_cents),
+        deferred_liab:  aux.where(deferred_tax_classification: "liability").sum(:deferred_tax_amount_cents)
       }
     end
 

@@ -171,10 +171,12 @@ module Taxes
     # ── Mapeo de columnas ──────────────────────────────────────────────────
 
     # Regla de mapeo: columna esperada → palabras clave normalizadas
+    # Regla clave: "Código contable" tiene "codigo"; "Cuenta contable" tiene "cuenta".
+    # Nunca usar "contable" como keyword para account_name — es ambiguo con la columna del código.
     COLUMN_MAP_RULES = {
       account_type:    %w[nivel],
-      account_code:    %w[codigo],
-      account_name:    %w[cuenta contable nombre],
+      account_code:    %w[codigo],     # "Código contable" → match "codigo"
+      account_name:    %w[cuenta nombre descripcion],  # "Cuenta contable" → match "cuenta"
       opening_balance: %w[inicial],
       debit:           %w[debito debe],
       credit:          %w[credito haber],
