@@ -69,6 +69,18 @@ module ApplicationHelper
     end
   end
 
+  def nivel_badge(nivel)
+    cfg = case nivel.to_s.strip.downcase
+    when "clase"      then ["Clase",      "bg-dark"]
+    when "grupo"      then ["Grupo",      "bg-secondary"]
+    when "cuenta"     then ["Cuenta",     "bg-primary"]
+    when "subcuenta"  then ["SubCuenta",  "bg-info text-dark"]
+    when "auxiliar"   then ["Auxiliar",   "bg-light text-dark border"]
+    else                   [nivel,        "bg-light text-muted border"]
+    end
+    content_tag(:span, cfg[0], class: "badge #{cfg[1]}", style: "font-size:0.65rem")
+  end
+
   def row_class(item)
     return "table-warning" if item.review_status == "pending"
     return "table-success"  if item.has_fiscal_effect == false

@@ -1,17 +1,18 @@
 module Taxes
   class BalanceImporter
-    # Aliases tolerantes a variaciones de nombre de columna del Excel
-    COLUMN_ALIASES = {
-      account_type:    %w[tipo_de_cuenta tipo_cuenta tipo clase],
-      account_code:    %w[cuenta_contable cuenta codigo],
-      account_name:    %w[nombre nombre_de_la_cuenta descripcion],
-      opening_balance: %w[saldo_inicial si],
-      debit:           %w[debito debe],
-      credit:          %w[credito haber],
-      closing_balance: %w[saldo_final sf]
-    }.freeze
+    # Columna 1 → nivel jerárquico (Clase/Grupo/Cuenta/SubCuenta/Auxiliar)
+    # Columna 2 → código contable (numérico)
+    # Columna 3 → nombre de la cuenta
+    # Columnas 4-7 → saldo inicial, débito, crédito, saldo final
+    EXPECTED_COLUMNS = 7
 
-    Result = Struct.new(:success, :imported, :skipped, :errors, keyword_init: true)
+    # Cuántas filas de metadatos puede tener el encabezado antes de los headers reales
+    MAX_HEADER_SCAN_ROWS = 15
+
+    # Palabras clave para detectar la fila de encabezados
+    HEADER_KEYWORDS = %w[nivel codigo código cuenta saldo debito crédito].freeze
+
+    Result = Struct.new(:success, :imported, :skipped, :errors, :meta, keyword_init: true)
 
     def initialize(file, period)
       @file    = file
@@ -19,51 +20,83 @@ module Taxes
       @errors  = []
       @imported = 0
       @skipped  = 0
+      @meta     = {}
     end
 
     def call
       spreadsheet = open_spreadsheet
       sheet = spreadsheet.sheet(0)
 
-      raw_headers = sheet.row(1)
-      headers = normalize_headers(raw_headers)
-      mapping = map_columns(headers)
-
-      unless mapping_complete?(mapping)
-        missing = required_columns - mapping.keys
+      # 1. Detectar fila de encabezados y extraer metadatos previos
+      header_row_idx = find_header_row(sheet)
+      if header_row_idx.nil?
         return Result.new(
           success: false, imported: 0, skipped: 0,
-          errors: ["Columnas requeridas no encontradas: #{missing.join(', ')}. " \
-                   "Encabezados detectados: #{raw_headers.compact.join(', ')}"]
+          errors: ["No se encontró la fila de encabezados. " \
+                   "Se esperan columnas: Nivel, Código contable, Cuenta contable, " \
+                   "Saldo inicial, Débito, Crédito, Saldo final"],
+          meta: {}
         )
       end
 
-      (2..sheet.last_row).each do |i|
+      extract_metadata(sheet, header_row_idx)
+      update_period_metadata
+
+      # 2. Mapear columnas a partir del encabezado detectado
+      headers = normalize_row(sheet.row(header_row_idx))
+      mapping = build_column_mapping(headers)
+
+      unless mapping_valid?(mapping)
+        missing = %i[account_code closing_balance] - mapping.keys
+        return Result.new(
+          success: false, imported: 0, skipped: 0,
+          errors: ["Columnas obligatorias no encontradas: #{missing.join(', ')}. " \
+                   "Encabezados detectados en fila #{header_row_idx}: #{headers.inspect}"],
+          meta: @meta
+        )
+      end
+
+      # 3. Importar filas de datos
+      first_data_row = header_row_idx + 1
+      (first_data_row..sheet.last_row).each do |i|
         row = sheet.row(i)
         next if row.compact.empty?
 
-        code = row[mapping[:account_code]].to_s.strip
+        raw_code = row[mapping[:account_code]]
+        # Los códigos numéricos llegan como Float (1101.0); convertir a entero antes de stringify
+        code = raw_code.is_a?(Numeric) ? raw_code.to_i.to_s : raw_code.to_s.strip
         next if code.blank?
 
-        attrs = extract_attrs(row, mapping)
+        nivel = row[mapping[:account_type]].to_s.strip
+
+        attrs = {
+          account_type:          nivel,
+          account_code:          code,
+          account_name:          row[mapping[:account_name]].to_s.strip,
+          account_class:         code[0],
+          opening_balance_cents: to_cents(row[mapping[:opening_balance]]),
+          debit_cents:           to_cents(row[mapping[:debit]]),
+          credit_cents:          to_cents(row[mapping[:credit]]),
+          closing_balance_cents: to_cents(row[mapping[:closing_balance]]),
+          review_status:         "pending",
+          reconciliation_period: @period
+        }
+
         item = ReconciliationItem.find_or_initialize_by(
           reconciliation_period: @period,
-          account_code: code
+          account_code:          code
         )
 
         if item.new_record?
           item.assign_attributes(attrs)
-          item.account_class = code[0]
-          item.review_status = "pending"
-          # save(validate: false) porque has_fiscal_effect es nil y eso dispara validaciones de ajuste
           if item.save(validate: false)
             @imported += 1
           else
-            @errors << "Fila #{i}: #{item.errors.full_messages.join(', ')}"
+            @errors << "Fila #{i} (#{code}): #{item.errors.full_messages.join(', ')}"
             @skipped += 1
           end
         else
-          # Cuenta ya existe; actualizar saldos pero preservar conciliación manual
+          # Cuenta ya existe — actualizar saldos, conservar conciliación manual
           item.update_columns(
             account_type:          attrs[:account_type],
             account_name:          attrs[:account_name],
@@ -77,14 +110,109 @@ module Taxes
         end
       end
 
-      @period.update!(status: "in_review") if @period.draft? && @imported > 0
+      @period.update!(status: "in_review") if @period.status == "draft" && @imported > 0
 
-      Result.new(success: @errors.empty?, imported: @imported, skipped: @skipped, errors: @errors)
+      Result.new(
+        success: @errors.empty?,
+        imported: @imported,
+        skipped: @skipped,
+        errors: @errors,
+        meta: @meta
+      )
     rescue => e
-      Result.new(success: false, imported: 0, skipped: 0, errors: [e.message])
+      Result.new(success: false, imported: 0, skipped: 0, errors: [e.message], meta: @meta)
     end
 
     private
+
+    # ── Detección automática del encabezado ────────────────────────────────
+
+    def find_header_row(sheet)
+      last_scan = [MAX_HEADER_SCAN_ROWS, sheet.last_row].min
+      (1..last_scan).each do |i|
+        row = sheet.row(i)
+        next if row.compact.empty?
+        normalized = row.map { |c| normalize_str(c.to_s) }
+        # La fila de encabezados debe contener al menos 2 palabras clave
+        matches = HEADER_KEYWORDS.count { |kw| normalized.any? { |h| h.include?(kw) } }
+        return i if matches >= 2
+      end
+      nil
+    end
+
+    # ── Extracción de metadatos (filas previas al encabezado) ──────────────
+
+    def extract_metadata(sheet, header_row_idx)
+      lines = (1...header_row_idx).map { |i| sheet.row(i).compact.first.to_s.strip }.reject(&:blank?)
+      @meta[:raw_lines] = lines
+
+      lines.each do |line|
+        # NIT: contiene guión al final y dígito de verificación
+        if line.match?(/\d{3}[.\s]?\d{3}[.\s]?\d{3}[-]?\d/)
+          @meta[:nit] = line
+        # Fecha de período
+        elsif line.match?(/\d{2}\/\d{2}\/\d{4}/)
+          @meta[:period_range] = line
+        # Nombre empresa (línea que no es título del reporte)
+        elsif line.length > 5 && !line.downcase.include?("balance") &&
+              !line.downcase.include?("prueba") && @meta[:company_name].nil?
+          @meta[:company_name] = line
+        end
+      end
+    end
+
+    def update_period_metadata
+      updates = {}
+      updates[:company_name] = @meta[:company_name] if @meta[:company_name].present? && @period.company_name.blank?
+      updates[:company_nit]  = @meta[:nit]          if @meta[:nit].present?          && @period.company_nit.blank?
+      @period.update_columns(updates.merge(updated_at: Time.current)) if updates.any?
+    end
+
+    # ── Mapeo de columnas ──────────────────────────────────────────────────
+
+    # Regla de mapeo: columna esperada → palabras clave normalizadas
+    COLUMN_MAP_RULES = {
+      account_type:    %w[nivel],
+      account_code:    %w[codigo],
+      account_name:    %w[cuenta contable nombre],
+      opening_balance: %w[inicial],
+      debit:           %w[debito debe],
+      credit:          %w[credito haber],
+      closing_balance: %w[final]
+    }.freeze
+
+    def build_column_mapping(headers)
+      COLUMN_MAP_RULES.each_with_object({}) do |(field, keywords), map|
+        idx = headers.index { |h| keywords.any? { |kw| h.include?(kw) } }
+        map[field] = idx if idx
+      end
+    end
+
+    def mapping_valid?(mapping)
+      %i[account_code closing_balance].all? { |k| mapping.key?(k) }
+    end
+
+    # ── Normalización ──────────────────────────────────────────────────────
+
+    def normalize_str(str)
+      str.to_s.downcase.strip
+         .gsub(/[áàä]/, "a").gsub(/[éèë]/, "e")
+         .gsub(/[íìï]/, "i").gsub(/[óòö]/, "o")
+         .gsub(/[úùü]/, "u")
+         .gsub(/[^a-z0-9\s]/, " ")
+         .gsub(/\s+/, " ").strip
+    end
+
+    def normalize_row(row)
+      row.map { |h| normalize_str(h.to_s) }
+    end
+
+    def to_cents(val)
+      return 0 if val.nil? || val.to_s.strip.empty?
+      (val.to_f * 100).round
+    end
+
+    # ── Apertura del archivo ───────────────────────────────────────────────
 
     def open_spreadsheet
       path = @file.respond_to?(:path) ? @file.path : @file.to_s
@@ -96,50 +224,6 @@ module Taxes
       name = @file.respond_to?(:original_filename) ? @file.original_filename.to_s : @file.to_s
       ext  = File.extname(name).downcase.delete(".")
       %w[xlsx xls ods].include?(ext) ? ext.to_sym : :xlsx
-    end
-
-    def normalize(str)
-      str.to_s.downcase.strip
-         .gsub(/\s+/, "_")
-         .gsub(/[áàä]/, "a").gsub(/[éèë]/, "e")
-         .gsub(/[íìï]/, "i").gsub(/[óòö]/, "o")
-         .gsub(/[úùü]/, "u")
-         .gsub(/[^a-z0-9_]/, "")
-    end
-
-    def normalize_headers(row)
-      row.map { |h| normalize(h.to_s) }
-    end
-
-    def map_columns(headers)
-      COLUMN_ALIASES.each_with_object({}) do |(field, aliases), map|
-        idx = headers.index { |h| aliases.any? { |a| h.include?(a) } }
-        map[field] = idx if idx
-      end
-    end
-
-    def required_columns
-      %i[account_code closing_balance]
-    end
-
-    def mapping_complete?(mapping)
-      required_columns.all? { |k| mapping.key?(k) }
-    end
-
-    def extract_attrs(row, m)
-      {
-        account_type:          row[m[:account_type]].to_s.strip,
-        account_name:          row[m[:account_name]].to_s.strip,
-        opening_balance_cents: to_cents(row[m[:opening_balance]]),
-        debit_cents:           to_cents(row[m[:debit]]),
-        credit_cents:          to_cents(row[m[:credit]]),
-        closing_balance_cents: to_cents(row[m[:closing_balance]])
-      }
-    end
-
-    def to_cents(val)
-      return 0 if val.nil? || val.to_s.strip.empty?
-      (val.to_f * 100).round
     end
   end
 end

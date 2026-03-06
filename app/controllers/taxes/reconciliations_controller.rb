@@ -48,8 +48,11 @@ module Taxes
       result = Taxes::BalanceImporter.new(file, @period).call
 
       if result.success
+        meta = result.meta
         msg = "Importación exitosa: #{result.imported} cuentas cargadas."
         msg += " #{result.skipped} actualizadas (ya existían)." if result.skipped > 0
+        msg += " Empresa: #{meta[:company_name]}."              if meta[:company_name].present?
+        msg += " Período: #{meta[:period_range]}."              if meta[:period_range].present?
         redirect_to taxes_reconciliation_path(@period), notice: msg
       else
         redirect_to taxes_reconciliation_path(@period),

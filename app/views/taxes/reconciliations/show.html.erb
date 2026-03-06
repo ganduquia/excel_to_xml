@@ -198,7 +198,7 @@
                 <td>
                   <code class="text-primary"><%= item.account_code %></code>
                   <% if item.account_type.present? %>
-                    <br><span class="text-muted" style="font-size:0.7rem"><%= item.account_type %></span>
+                    <br><%= nivel_badge(item.account_type) %>
                   <% end %>
                 </td>
                 <td><%= item.account_name %></td>
