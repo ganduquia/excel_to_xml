@@ -8,6 +8,7 @@ module Taxes
       @total_tax_rates      = TaxRate.where(active: true).count
       @total_concepts       = WithholdingConcept.where(active: true).count
       @recent_documents     = TaxDocument.order(created_at: :desc).limit(5)
+      @recon_periods_count  = ReconciliationPeriod.count
     end
   end
 end

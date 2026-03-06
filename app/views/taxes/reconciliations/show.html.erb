@@ -1,0 +1,498 @@
+<div class="container-fluid py-4">
+
+  <%# ── Encabezado ──────────────────────────────────────────────────────── %>
+  <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+    <div>
+      <%= link_to taxes_reconciliations_path, class: "text-decoration-none text-muted small" do %>
+        <i class="bi bi-arrow-left me-1"></i>Conciliaciones
+      <% end %>
+      <h3 class="mb-0 fw-bold mt-1">
+        <i class="bi bi-balance-scale me-2 text-primary"></i><%= @period.name %>
+      </h3>
+      <div class="text-muted small mt-1">
+        Año fiscal <%= @period.fiscal_year %>
+        <% if @period.company_name.present? %>
+          &nbsp;·&nbsp;<%= @period.company_name %>
+          <% if @period.company_nit.present? %>&nbsp;NIT <%= @period.company_nit %><% end %>
+        <% end %>
+        &nbsp;·&nbsp;Tasa ID: <strong><%= (@period.deferred_tax_rate * 100).round(1) %>%</strong>
+        &nbsp;·&nbsp;
+        <span class="badge <%= status_badge_class(@period.status) %>">
+          <%= t_recon_status(@period.status) %>
+        </span>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <% if @period.editable? && @stats[:total] > 0 %>
+        <% if @period.approvable? %>
+          <%= button_to approve_taxes_reconciliation_path(@period),
+                method: :post, class: "btn btn-success",
+                data: { confirm: "¿Aprobar y cerrar la conciliación?" } do %>
+            <i class="bi bi-check2-circle me-1"></i>Aprobar
+          <% end %>
+        <% end %>
+      <% end %>
+      <% if @stats[:total] > 0 %>
+        <%= link_to export_taxes_reconciliation_path(@period), class: "btn btn-outline-success" do %>
+          <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if notice %>
+    <div class="alert alert-success alert-dismissible fade show">
+      <i class="bi bi-check-circle me-2"></i><%= notice %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+  <% if alert %>
+    <div class="alert alert-danger alert-dismissible fade show">
+      <i class="bi bi-exclamation-triangle me-2"></i><%= alert %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+
+  <%# ── Tarjetas de resumen ─────────────────────────────────────────────── %>
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm text-center h-100">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold text-primary"><%= @stats[:total] %></div>
+          <div class="text-muted small">Total cuentas</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm text-center h-100">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold text-warning"><%= @stats[:pending] %></div>
+          <div class="text-muted small">Sin revisar</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm text-center h-100">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold text-success"><%= @stats[:reviewed] %></div>
+          <div class="text-muted small">Revisadas</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm text-center h-100">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-bold text-info"><%= @stats[:with_deferred] %></div>
+          <div class="text-muted small">Con ID</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm text-center h-100">
+        <div class="card-body py-3">
+          <div class="fs-5 fw-bold text-success"><%= format_cop(@stats[:deferred_asset]) %></div>
+          <div class="text-muted small">Activo ID</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-2">
+      <div class="card border-0 shadow-sm text-center h-100">
+        <div class="card-body py-3">
+          <div class="fs-5 fw-bold text-danger"><%= format_cop(@stats[:deferred_liab]) %></div>
+          <div class="text-muted small">Pasivo ID</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Barra de progreso ───────────────────────────────────────────────── %>
+  <% if @stats[:total] > 0 %>
+    <div class="mb-4">
+      <div class="d-flex justify-content-between small text-muted mb-1">
+        <span>Progreso de revisión</span>
+        <span><%= @period.completion_percentage %>% — <%= @stats[:reviewed] %> de <%= @stats[:total] %></span>
+      </div>
+      <div class="progress" style="height:8px">
+        <div class="progress-bar bg-primary"
+             style="width:<%= @period.completion_percentage %>%"
+             role="progressbar"></div>
+      </div>
+    </div>
+  <% end %>
+
+  <%# ── Panel de carga Excel ────────────────────────────────────────────── %>
+  <% if @period.editable? %>
+    <div class="card border-0 shadow-sm mb-4 border-start border-4 border-primary">
+      <div class="card-body">
+        <h6 class="fw-semibold mb-3">
+          <i class="bi bi-cloud-upload me-2 text-primary"></i>
+          <%= @stats[:total] > 0 ? "Reimportar balance de comprobación" : "Cargar balance de comprobación" %>
+        </h6>
+        <%= form_with url: import_taxes_reconciliation_path(@period),
+              method: :post, multipart: true, class: "d-flex gap-2 align-items-end flex-wrap" do |f| %>
+          <div>
+            <%= f.file_field :file, accept: ".xlsx,.xls",
+                  class: "form-control form-control-sm",
+                  style: "max-width:320px" %>
+            <div class="form-text">Columnas: Tipo · Cuenta · Nombre · Saldo Inicial · Débito · Crédito · Saldo Final</div>
+          </div>
+          <%= f.submit "Importar", class: "btn btn-primary btn-sm" %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# ── Filtros ─────────────────────────────────────────────────────────── %>
+  <% if @stats[:total] > 0 %>
+    <div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+      <span class="text-muted small fw-semibold">Filtrar:</span>
+      <%= link_to taxes_reconciliation_path(@period),
+            class: "btn btn-sm #{params[:filter].blank? ? 'btn-primary' : 'btn-outline-secondary'}" do %>
+        Todas (<%= @stats[:total] %>)
+      <% end %>
+      <%= link_to taxes_reconciliation_path(@period, filter: "pending"),
+            class: "btn btn-sm #{params[:filter] == 'pending' ? 'btn-warning' : 'btn-outline-warning'}" do %>
+        Sin revisar (<%= @stats[:pending] %>)
+      <% end %>
+      <%= link_to taxes_reconciliation_path(@period, filter: "with_effect"),
+            class: "btn btn-sm #{params[:filter] == 'with_effect' ? 'btn-info' : 'btn-outline-info'}" do %>
+        Con efecto fiscal (<%= @stats[:with_effect] %>)
+      <% end %>
+      <%= link_to taxes_reconciliation_path(@period, filter: "without_effect"),
+            class: "btn btn-sm #{params[:filter] == 'without_effect' ? 'btn-secondary' : 'btn-outline-secondary'}" do %>
+        Sin efecto fiscal (<%= @stats[:without_effect] %>)
+      <% end %>
+      <%= link_to taxes_reconciliation_path(@period, filter: "deferred"),
+            class: "btn btn-sm #{params[:filter] == 'deferred' ? 'btn-dark' : 'btn-outline-dark'}" do %>
+        Con ID (<%= @stats[:with_deferred] %>)
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# ── Tabla principal ─────────────────────────────────────────────────── %>
+  <% if @items.any? %>
+    <div class="card border-0 shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" style="font-size:0.8rem">
+          <thead class="table-dark">
+            <tr>
+              <th>Cuenta</th>
+              <th>Nombre</th>
+              <th class="text-end">Saldo Inicial</th>
+              <th class="text-end">Débito</th>
+              <th class="text-end">Crédito</th>
+              <th class="text-end">Saldo Contable</th>
+              <th class="text-center">Ef. Fiscal</th>
+              <th class="text-end">Ajuste Fiscal</th>
+              <th class="text-end">Saldo Fiscal</th>
+              <th class="text-end">Dif. Temp.</th>
+              <th class="text-end">Imp. Diferido</th>
+              <th class="text-center">Clasif. ID</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @items.each do |item| %>
+              <tr class="<%= row_class(item) %>">
+                <td>
+                  <code class="text-primary"><%= item.account_code %></code>
+                  <% if item.account_type.present? %>
+                    <br><span class="text-muted" style="font-size:0.7rem"><%= item.account_type %></span>
+                  <% end %>
+                </td>
+                <td><%= item.account_name %></td>
+                <td class="text-end text-muted"><%= format_cop(item.opening_balance_cents) %></td>
+                <td class="text-end text-muted"><%= format_cop(item.debit_cents) %></td>
+                <td class="text-end text-muted"><%= format_cop(item.credit_cents) %></td>
+                <td class="text-end fw-semibold"><%= format_cop(item.closing_balance_cents) %></td>
+                <td class="text-center">
+                  <%= fiscal_effect_badge(item.has_fiscal_effect) %>
+                </td>
+                <td class="text-end <%= item.fiscal_adjustment_cents.to_i != 0 ? 'fw-bold text-warning' : 'text-muted' %>">
+                  <%= item.fiscal_adjustment_cents.to_i != 0 ? format_cop_signed(item.fiscal_adjustment_cents) : "—" %>
+                </td>
+                <td class="text-end">
+                  <% if item.fiscal_balance_cents %>
+                    <span class="fw-semibold"><%= format_cop(item.fiscal_balance_cents) %></span>
+                  <% else %>
+                    <span class="text-muted">—</span>
+                  <% end %>
+                </td>
+                <td class="text-end">
+                  <% if item.temporary_difference_cents != 0 %>
+                    <span class="fw-bold <%= item.temporary_difference_cents > 0 ? 'text-warning' : 'text-danger' %>">
+                      <%= format_cop_signed(item.temporary_difference_cents) %>
+                    </span>
+                  <% else %>
+                    <span class="text-muted">0</span>
+                  <% end %>
+                </td>
+                <td class="text-end">
+                  <% if item.applies_deferred_tax && item.deferred_tax_amount_cents > 0 %>
+                    <span class="fw-bold"><%= format_cop(item.deferred_tax_amount_cents) %></span>
+                  <% else %>
+                    <span class="text-muted">—</span>
+                  <% end %>
+                </td>
+                <td class="text-center">
+                  <%= deferred_tax_badge(item.deferred_tax_classification) %>
+                </td>
+                <td>
+                  <% if @period.editable? %>
+                    <%= link_to taxes_reconciliation_path(@period, edit_item: item.id),
+                          class: "btn btn-sm btn-outline-primary" do %>
+                      <i class="bi bi-pencil"></i>
+                    <% end %>
+                  <% else %>
+                    <% if item.reconciliation_item_changes.any? %>
+                      <span title="<%= item.reconciliation_item_changes.count %> cambio(s) registrado(s)">
+                        <i class="bi bi-clock-history text-muted"></i>
+                      </span>
+                    <% end %>
+                  <% end %>
+                </td>
+              </tr>
+              <%# Fila del comentario (si hay ajuste) %>
+              <% if item.adjustment_comment.present? %>
+                <tr class="table-light" style="font-size:0.75rem">
+                  <td colspan="2" class="text-muted ps-3">
+                    <i class="bi bi-chat-left-text me-1"></i>
+                    <em><%= item.adjustment_comment %></em>
+                  </td>
+                  <td colspan="11"></td>
+                </tr>
+              <% end %>
+            <% end %>
+          </tbody>
+          <tfoot class="table-dark">
+            <tr class="fw-bold">
+              <td colspan="2">TOTALES</td>
+              <td class="text-end"><%= format_cop(@items.sum(:opening_balance_cents)) %></td>
+              <td class="text-end"><%= format_cop(@items.sum(:debit_cents)) %></td>
+              <td class="text-end"><%= format_cop(@items.sum(:credit_cents)) %></td>
+              <td class="text-end"><%= format_cop(@items.sum(:closing_balance_cents)) %></td>
+              <td></td>
+              <td class="text-end"><%= format_cop_signed(@items.sum(:fiscal_adjustment_cents)) %></td>
+              <td class="text-end"><%= format_cop(@items.where.not(fiscal_balance_cents: nil).sum(:fiscal_balance_cents)) %></td>
+              <td class="text-end"><%= format_cop_signed(@items.sum(:temporary_difference_cents)) %></td>
+              <td class="text-end"><%= format_cop(@items.sum(:deferred_tax_amount_cents)) %></td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  <% elsif @stats[:total] == 0 %>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-file-earmark-spreadsheet fs-1 text-muted d-block mb-3"></i>
+        <h5 class="text-muted">Sin cuentas importadas</h5>
+        <p class="text-muted small">Carga el balance de comprobación en Excel para comenzar la conciliación.</p>
+      </div>
+    </div>
+  <% else %>
+    <div class="alert alert-info">
+      <i class="bi bi-funnel me-2"></i>No hay cuentas con el filtro seleccionado.
+      <%= link_to "Ver todas", taxes_reconciliation_path(@period) %>
+    </div>
+  <% end %>
+
+  <%# ── Modal de edición ───────────────────────────────────────────────── %>
+  <% if @editing_item %>
+    <div class="modal fade" id="editItemModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="bi bi-pencil me-2 text-primary"></i>
+              Conciliar cuenta <code><%= @editing_item.account_code %></code>
+            </h5>
+            <%= link_to taxes_reconciliation_path(@period),
+                  class: "btn-close", aria: { label: "Cerrar" } %>
+          </div>
+
+          <%= form_with url: taxes_reconciliation_item_path(@editing_item),
+                method: :patch, local: true do |f| %>
+            <div class="modal-body">
+
+              <%# Info de la cuenta %>
+              <div class="alert alert-light border mb-4">
+                <div class="row g-2 small">
+                  <div class="col-sm-4">
+                    <span class="text-muted">Tipo:</span>
+                    <strong><%= @editing_item.account_type.presence || "—" %></strong>
+                  </div>
+                  <div class="col-sm-8">
+                    <span class="text-muted">Nombre:</span>
+                    <strong><%= @editing_item.account_name %></strong>
+                  </div>
+                  <div class="col-sm-4">
+                    <span class="text-muted">Saldo contable:</span>
+                    <strong class="text-primary"><%= format_cop(@editing_item.closing_balance_cents) %></strong>
+                  </div>
+                  <div class="col-sm-4">
+                    <span class="text-muted">Débito:</span>
+                    <strong><%= format_cop(@editing_item.debit_cents) %></strong>
+                  </div>
+                  <div class="col-sm-4">
+                    <span class="text-muted">Crédito:</span>
+                    <strong><%= format_cop(@editing_item.credit_cents) %></strong>
+                  </div>
+                </div>
+              </div>
+
+              <%# Paso 1: Efecto fiscal %>
+              <div class="mb-4">
+                <label class="form-label fw-semibold">
+                  <span class="badge bg-primary me-1">1</span>
+                  ¿Esta cuenta tiene efecto fiscal diferente al contable?
+                </label>
+                <div class="d-flex gap-3 mt-2">
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="reconciliation_item[has_fiscal_effect]"
+                           id="effect_nil" value=""
+                           <%= @editing_item.has_fiscal_effect.nil? ? "checked" : "" %>>
+                    <label class="form-check-label" for="effect_nil">
+                      <span class="badge bg-secondary">Sin revisar</span>
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="reconciliation_item[has_fiscal_effect]"
+                           id="effect_yes" value="true"
+                           <%= @editing_item.has_fiscal_effect == true ? "checked" : "" %>>
+                    <label class="form-check-label" for="effect_yes">
+                      <span class="badge bg-warning text-dark">Sí, hay diferencia fiscal</span>
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="reconciliation_item[has_fiscal_effect]"
+                           id="effect_no" value="false"
+                           <%= @editing_item.has_fiscal_effect == false ? "checked" : "" %>>
+                    <label class="form-check-label" for="effect_no">
+                      <span class="badge bg-success">No, saldo contable = fiscal</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <%# Paso 2: Ajuste (solo si hay efecto fiscal) %>
+              <div id="adjustment_section" class="<%= @editing_item.has_fiscal_effect == true ? '' : 'd-none' %>">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">
+                    <span class="badge bg-primary me-1">2</span>
+                    Valor del ajuste fiscal (en pesos $COP)
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" step="1"
+                           name="reconciliation_item[fiscal_adjustment_cents]"
+                           class="form-control"
+                           id="adjustment_input"
+                           placeholder="Ej: -3000000 o 5000000"
+                           value="<%= @editing_item.fiscal_adjustment_cents.to_i / 100 %>">
+                  </div>
+                  <div class="form-text">
+                    Positivo (+): el saldo fiscal es mayor que el contable.<br>
+                    Negativo (−): el saldo fiscal es menor que el contable.<br>
+                    <strong>Saldo fiscal = Saldo contable + Ajuste</strong>
+                  </div>
+                </div>
+
+                <%# Preview en tiempo real %>
+                <div class="alert alert-info small py-2 mb-3" id="fiscal_preview">
+                  Saldo fiscal calculado: <strong id="preview_value"><%= format_cop(@editing_item.fiscal_balance_cents || @editing_item.closing_balance_cents) %></strong>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">
+                    <span class="badge bg-primary me-1">3</span>
+                    Comentario / justificación del ajuste
+                    <span class="text-danger">*</span>
+                  </label>
+                  <textarea name="reconciliation_item[adjustment_comment]"
+                            class="form-control" rows="3"
+                            placeholder="Explica el origen del ajuste. Ej: Multa no deducible Art. 107 ET. Mínimo 10 caracteres."
+                            required><%= @editing_item.adjustment_comment %></textarea>
+                </div>
+              </div>
+
+              <%# Razón de exclusión (si no tiene efecto) %>
+              <div id="exclusion_section" class="<%= @editing_item.has_fiscal_effect == false ? '' : 'd-none' %>">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">
+                    <span class="badge bg-secondary me-1">Opcional</span>
+                    Razón de exclusión (opcional)
+                  </label>
+                  <textarea name="reconciliation_item[exclusion_reason]"
+                            class="form-control" rows="2"
+                            placeholder="Ej: Cuenta de control sin diferencia contable-fiscal."><%= @editing_item.exclusion_reason %></textarea>
+                </div>
+              </div>
+
+              <%# Historial de cambios %>
+              <% if @editing_item.reconciliation_item_changes.any? %>
+                <div class="mt-4">
+                  <h6 class="fw-semibold text-muted small">
+                    <i class="bi bi-clock-history me-1"></i>Historial de cambios
+                  </h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm table-bordered small">
+                      <thead class="table-light">
+                        <tr><th>Campo</th><th>Antes</th><th>Después</th><th>Fecha</th></tr>
+                      </thead>
+                      <tbody>
+                        <% @editing_item.reconciliation_item_changes.order(created_at: :desc).limit(10).each do |ch| %>
+                          <tr>
+                            <td><code><%= ch.field_name %></code></td>
+                            <td class="text-muted"><%= ch.old_value.presence || "—" %></td>
+                            <td><%= ch.new_value.presence || "—" %></td>
+                            <td class="text-muted"><%= ch.created_at.strftime("%d/%m/%Y %H:%M") %></td>
+                          </tr>
+                        <% end %>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              <% end %>
+
+            </div>
+            <div class="modal-footer">
+              <%= link_to "Cancelar", taxes_reconciliation_path(@period), class: "btn btn-outline-secondary" %>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>Guardar conciliación
+              </button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <%# Abrir modal automáticamente %>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        new bootstrap.Modal(document.getElementById('editItemModal')).show();
+      });
+
+      // Mostrar/ocultar secciones según efecto fiscal
+      document.querySelectorAll('input[name="reconciliation_item[has_fiscal_effect]"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+          var adjSection = document.getElementById('adjustment_section');
+          var excSection = document.getElementById('exclusion_section');
+          adjSection.classList.toggle('d-none', this.value !== 'true');
+          excSection.classList.toggle('d-none', this.value !== 'false');
+        });
+      });
+
+      // Preview del saldo fiscal en tiempo real
+      var contableRaw = <%= @editing_item.closing_balance_cents.to_i %>;
+      document.getElementById('adjustment_input')?.addEventListener('input', function() {
+        var adj = parseFloat(this.value) || 0;
+        var fiscal = (contableRaw / 100) + adj;
+        document.getElementById('preview_value').textContent =
+          '$ ' + fiscal.toLocaleString('es-CO', { minimumFractionDigits: 0 });
+      });
+    </script>
+  <% end %>
+
+</div>

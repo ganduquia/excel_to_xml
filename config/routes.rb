@@ -27,5 +27,15 @@ Rails.application.routes.draw do
     resources :withholding_concepts, only: %i[index new create] do
       member { patch :toggle }
     end
+
+    resources :reconciliations, only: %i[index new create show destroy] do
+      member do
+        post :import
+        post :approve
+        get  :export
+      end
+    end
+
+    resources :reconciliation_items, only: %i[update]
   end
 end

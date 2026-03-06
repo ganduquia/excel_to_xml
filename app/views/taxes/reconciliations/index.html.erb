@@ -1,0 +1,104 @@
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <%= link_to taxes_root_path, class: "text-decoration-none text-muted small" do %>
+        <i class="bi bi-arrow-left me-1"></i>Dashboard
+      <% end %>
+      <h3 class="mb-0 fw-bold mt-1">
+        <i class="bi bi-balance-scale me-2 text-primary"></i>Conciliación Contable y Fiscal
+      </h3>
+    </div>
+    <%= link_to new_taxes_reconciliation_path, class: "btn btn-primary" do %>
+      <i class="bi bi-plus-circle me-2"></i>Nuevo período
+    <% end %>
+  </div>
+
+  <% if notice %>
+    <div class="alert alert-success alert-dismissible fade show">
+      <i class="bi bi-check-circle me-2"></i><%= notice %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+
+  <% if alert %>
+    <div class="alert alert-danger alert-dismissible fade show">
+      <i class="bi bi-exclamation-triangle me-2"></i><%= alert %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+
+  <% if @periods.empty? %>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-balance-scale fs-1 text-muted d-block mb-3"></i>
+        <h5 class="text-muted">No hay períodos de conciliación</h5>
+        <p class="text-muted small mb-4">Crea un período fiscal y carga el balance de comprobación desde Excel.</p>
+        <%= link_to new_taxes_reconciliation_path, class: "btn btn-primary" do %>
+          <i class="bi bi-plus-circle me-2"></i>Crear primer período
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <div class="row g-3">
+      <% @periods.each do |p| %>
+        <div class="col-md-6 col-lg-4">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="fw-bold mb-0"><%= p.name %></h5>
+                <span class="badge <%= status_badge_class(p.status) %>">
+                  <%= t_recon_status(p.status) %>
+                </span>
+              </div>
+              <div class="text-muted small mb-3">
+                <i class="bi bi-calendar3 me-1"></i>Año fiscal <%= p.fiscal_year %>
+                <% if p.company_name.present? %>
+                  &nbsp;·&nbsp;<i class="bi bi-building me-1"></i><%= p.company_name %>
+                <% end %>
+              </div>
+
+              <% if p.items_count > 0 %>
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span>Avance de revisión</span>
+                    <span><%= p.reviewed_count %> / <%= p.items_count %></span>
+                  </div>
+                  <div class="progress" style="height:6px">
+                    <div class="progress-bar bg-primary" style="width:<%= p.completion_percentage %>%"></div>
+                  </div>
+                </div>
+                <div class="row g-2 small mb-3">
+                  <div class="col-6 text-center border rounded py-2">
+                    <div class="fw-bold text-success"><%= format_cop(p.total_deferred_tax_asset_cents) %></div>
+                    <div class="text-muted">Activo ID</div>
+                  </div>
+                  <div class="col-6 text-center border rounded py-2">
+                    <div class="fw-bold text-danger"><%= format_cop(p.total_deferred_tax_liability_cents) %></div>
+                    <div class="text-muted">Pasivo ID</div>
+                  </div>
+                </div>
+              <% else %>
+                <p class="text-muted small">Sin cuentas importadas aún.</p>
+              <% end %>
+
+              <div class="d-flex gap-2">
+                <%= link_to taxes_reconciliation_path(p), class: "btn btn-sm btn-outline-primary flex-fill" do %>
+                  <i class="bi bi-eye me-1"></i>Abrir
+                <% end %>
+                <% unless p.approved? %>
+                  <%= button_to taxes_reconciliation_path(p), method: :delete,
+                        class: "btn btn-sm btn-outline-danger",
+                        data: { confirm: "¿Eliminar el período '#{p.name}'?" } do %>
+                    <i class="bi bi-trash"></i>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+</div>

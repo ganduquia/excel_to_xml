@@ -1,0 +1,84 @@
+<div class="container py-4" style="max-width:640px">
+
+  <div class="mb-4">
+    <%= link_to taxes_reconciliations_path, class: "text-decoration-none text-muted small" do %>
+      <i class="bi bi-arrow-left me-1"></i>Volver a conciliaciones
+    <% end %>
+    <h3 class="mb-0 fw-bold mt-1">
+      <i class="bi bi-balance-scale me-2 text-primary"></i>Nuevo período de conciliación
+    </h3>
+  </div>
+
+  <%= form_with model: @period, url: taxes_reconciliations_path, method: :post, class: "card border-0 shadow-sm" do |f| %>
+    <div class="card-body">
+
+      <% if @period.errors.any? %>
+        <div class="alert alert-danger">
+          <% @period.errors.full_messages.each do |msg| %>
+            <div><i class="bi bi-exclamation-circle me-1"></i><%= msg %></div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="mb-3">
+        <%= f.label :name, "Nombre del período", class: "form-label fw-semibold" %>
+        <%= f.text_field :name, class: "form-control",
+              placeholder: "Ej: Conciliación Fiscal 2025 — ACME S.A.S." %>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <%= f.label :fiscal_year, "Año fiscal", class: "form-label fw-semibold" %>
+          <%= f.number_field :fiscal_year, class: "form-control", min: 2000, max: 2099 %>
+        </div>
+        <div class="col-sm-6">
+          <%= f.label :deferred_tax_rate, "Tasa impuesto diferido", class: "form-label fw-semibold" %>
+          <div class="input-group">
+            <%= f.number_field :deferred_tax_rate, class: "form-control",
+                  min: 0, max: 40, step: 0.01,
+                  value: (@period.deferred_tax_rate.to_f * 100).round(2),
+                  id: "rate_pct_field" %>
+            <span class="input-group-text">%</span>
+          </div>
+          <div class="form-text">Colombia 2024-2026: 35% (Art. 240 ET)</div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <%= f.label :company_nit, "NIT empresa", class: "form-label fw-semibold" %>
+          <%= f.text_field :company_nit, class: "form-control", placeholder: "900.123.456-7" %>
+        </div>
+        <div class="col-sm-6">
+          <%= f.label :company_name, "Razón social", class: "form-label fw-semibold" %>
+          <%= f.text_field :company_name, class: "form-control" %>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6">
+          <%= f.label :start_date, "Inicio período", class: "form-label fw-semibold" %>
+          <%= f.date_field :start_date, class: "form-control" %>
+        </div>
+        <div class="col-sm-6">
+          <%= f.label :end_date, "Fin período", class: "form-label fw-semibold" %>
+          <%= f.date_field :end_date, class: "form-control" %>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <%= f.submit "Crear período", class: "btn btn-primary" %>
+        <%= link_to "Cancelar", taxes_reconciliations_path, class: "btn btn-outline-secondary" %>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Convertir porcentaje a decimal al enviar %>
+  <script>
+    document.querySelector("form").addEventListener("submit", function() {
+      var field = document.getElementById("rate_pct_field");
+      field.value = (parseFloat(field.value) / 100).toFixed(4);
+    });
+  </script>
+
+</div>

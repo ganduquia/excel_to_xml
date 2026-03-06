@@ -123,6 +123,38 @@
     </div>
   </div>
 
+  <%# ── Conciliación contable y fiscal ─────────────────────────────────── %>
+  <div class="card border-0 shadow-sm mb-4 border-start border-4 border-primary">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-balance-scale fs-2 text-primary me-3"></i>
+          <div>
+            <h5 class="mb-0">Conciliación Contable y Fiscal</h5>
+            <small class="text-muted">
+              Art. 772-1 E.T. · Diferencias temporarias · Impuesto diferido (IAS 12)
+            </small>
+          </div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <% if @recon_periods_count > 0 %>
+            <span class="badge bg-secondary"><%= @recon_periods_count %> período(s)</span>
+          <% end %>
+          <%= link_to taxes_reconciliations_path, class: "btn btn-sm btn-outline-primary" do %>
+            <i class="bi bi-list me-1"></i>Ver períodos
+          <% end %>
+          <%= link_to new_taxes_reconciliation_path, class: "btn btn-sm btn-primary" do %>
+            <i class="bi bi-plus-circle me-1"></i>Nuevo período
+          <% end %>
+        </div>
+      </div>
+      <p class="text-muted small mb-0 mt-2">
+        Carga el balance de comprobación desde Excel, define el efecto fiscal por cuenta auxiliar,
+        registra ajustes con justificación y calcula automáticamente el saldo fiscal y el impuesto diferido.
+      </p>
+    </div>
+  </div>
+
   <%# ── Documentos recientes ───────────────────────────────────────────── %>
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
