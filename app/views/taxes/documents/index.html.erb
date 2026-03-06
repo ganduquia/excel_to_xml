@@ -26,6 +26,12 @@
   <% end %>
 
   <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+      <small class="text-muted">
+        Mostrando <strong><%= @documents.count %></strong> de <strong><%= @documents.total_count %></strong> documentos
+      </small>
+      <small class="text-muted">Página <%= @documents.current_page %> de <%= @documents.total_pages %></small>
+    </div>
     <div class="card-body p-0">
       <% if @documents.empty? %>
         <div class="text-center text-muted py-5">
@@ -85,5 +91,36 @@
         </div>
       <% end %>
     </div>
+
+    <% if @documents.total_pages > 1 %>
+      <div class="card-footer bg-white d-flex justify-content-center">
+        <nav>
+          <ul class="pagination pagination-sm mb-0">
+            <% if @documents.first_page? %>
+              <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-double-left"></i></span></li>
+              <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+            <% else %>
+              <li class="page-item"><%= link_to taxes_documents_path(page: 1), class: "page-link" do %><i class="bi bi-chevron-double-left"></i><% end %></li>
+              <li class="page-item"><%= link_to taxes_documents_path(page: @documents.prev_page), class: "page-link" do %><i class="bi bi-chevron-left"></i><% end %></li>
+            <% end %>
+
+            <% (@documents.current_page - 2 .. @documents.current_page + 2).each do |p| %>
+              <% next if p < 1 || p > @documents.total_pages %>
+              <li class="page-item <%= 'active' if p == @documents.current_page %>">
+                <%= link_to p, taxes_documents_path(page: p), class: "page-link" %>
+              </li>
+            <% end %>
+
+            <% if @documents.last_page? %>
+              <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+              <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-double-right"></i></span></li>
+            <% else %>
+              <li class="page-item"><%= link_to taxes_documents_path(page: @documents.next_page), class: "page-link" do %><i class="bi bi-chevron-right"></i><% end %></li>
+              <li class="page-item"><%= link_to taxes_documents_path(page: @documents.total_pages), class: "page-link" do %><i class="bi bi-chevron-double-right"></i><% end %></li>
+            <% end %>
+          </ul>
+        </nav>
+      </div>
+    <% end %>
   </div>
 </div>
