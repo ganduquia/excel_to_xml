@@ -1,0 +1,118 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+            Convertidor Excel a XML
+          </h4>
+        </div>
+        <div class="card-body p-4">
+
+          <% if flash[:notice] %>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              <i class="bi bi-check-circle me-1"></i> <%= flash[:notice] %>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          <% end %>
+
+          <% if flash[:alert] %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <i class="bi bi-exclamation-triangle me-1"></i> <%= flash[:alert] %>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          <% end %>
+
+          <%= form_with url: converter_upload_path, multipart: true, local: true do |f| %>
+
+            <!-- Excel file -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-file-earmark-excel me-1 text-success"></i>
+                Archivo Excel <span class="text-danger">*</span>
+              </label>
+              <div class="upload-area border rounded-3 p-4 text-center">
+                <i class="bi bi-cloud-upload fs-1 text-primary"></i>
+                <p class="mt-2 mb-1 text-muted">Arrastra tu archivo aquí o selecciónalo</p>
+                <%= f.file_field :excel_file,
+                    accept: ".xlsx,.xls",
+                    class: "form-control mt-2",
+                    id: "excel_file" %>
+                <small class="text-muted">Formatos: .xlsx, .xls</small>
+              </div>
+            </div>
+
+            <!-- XSD file (optional) -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-shield-check me-1 text-primary"></i>
+                Schema XSD <span class="text-muted fw-normal">(opcional — para validar el XML generado)</span>
+              </label>
+              <div class="border rounded-3 p-3 bg-white" id="xsd-area">
+                <%= f.file_field :xsd_file,
+                    accept: ".xsd",
+                    class: "form-control",
+                    id: "xsd_file" %>
+                <small class="text-muted">
+                  Si subes un XSD, el XML generado será validado contra él antes de la descarga.
+                </small>
+              </div>
+            </div>
+
+            <div class="d-grid">
+              <%= f.submit "Convertir a XML",
+                  class: "btn btn-primary btn-lg",
+                  id: "submit-btn" %>
+            </div>
+          <% end %>
+
+        </div>
+      </div>
+
+      <!-- Info card -->
+      <div class="card mt-4 shadow-sm">
+        <div class="card-body">
+          <h6 class="card-title text-muted mb-3">
+            <i class="bi bi-info-circle me-1"></i> ¿Cómo funciona?
+          </h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="d-flex gap-2">
+                <span class="badge bg-primary rounded-pill">1</span>
+                <small class="text-muted">Sube tu Excel — la fila 1 se usa como etiquetas XML</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex gap-2">
+                <span class="badge bg-primary rounded-pill">2</span>
+                <small class="text-muted">Opcionalmente agrega un XSD para validar la estructura</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex gap-2">
+                <span class="badge bg-primary rounded-pill">3</span>
+                <small class="text-muted">Cada hoja del Excel → un nodo <code>&lt;sheet&gt;</code> en el XML</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="d-flex gap-2">
+                <span class="badge bg-primary rounded-pill">4</span>
+                <small class="text-muted">Si el XSD es válido, descarga el XML generado</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('excel_file').addEventListener('change', function() {
+    const name = this.files[0]?.name;
+    if (name) document.getElementById('submit-btn').value = `Convertir "${name}" a XML`;
+  });
+</script>

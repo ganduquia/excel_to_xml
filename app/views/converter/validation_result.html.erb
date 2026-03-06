@@ -1,0 +1,90 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+
+      <% if @xsd_valid %>
+        <!-- VALIDACIÓN EXITOSA -->
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-5 text-center">
+            <div class="mb-3">
+              <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+            </div>
+            <h3 class="fw-bold text-success">XML Generado Exitosamente</h3>
+
+            <% if @xsd_used %>
+              <p class="text-muted mt-2">
+                <i class="bi bi-shield-check me-1"></i>
+                El XML fue validado contra el XSD y es <strong>válido</strong>.
+              </p>
+            <% else %>
+              <p class="text-muted mt-2">Tu archivo Excel fue convertido correctamente.</p>
+            <% end %>
+
+            <div class="d-flex gap-3 justify-content-center mt-4">
+              <%= link_to converter_download_path(filename: @xml_filename, get_file: true),
+                  class: "btn btn-primary btn-lg" do %>
+                <i class="bi bi-download me-2"></i> Descargar XML
+              <% end %>
+              <%= link_to root_path, class: "btn btn-outline-secondary btn-lg" do %>
+                <i class="bi bi-arrow-left me-2"></i> Convertir otro archivo
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+      <% else %>
+        <!-- VALIDACIÓN FALLIDA -->
+        <div class="card shadow-sm border-danger border-2">
+          <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">
+              <i class="bi bi-x-circle me-2"></i>
+              XML inválido según el XSD
+            </h5>
+          </div>
+          <div class="card-body p-4">
+            <p class="text-muted">
+              El XML fue generado pero <strong>no cumple</strong> con la estructura definida en el XSD.
+              Revisa los errores a continuación:
+            </p>
+
+            <div class="table-responsive mt-3">
+              <table class="table table-sm table-bordered table-hover">
+                <thead class="table-danger">
+                  <tr>
+                    <th style="width: 80px;">Línea</th>
+                    <th>Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% @xsd_errors.each do |err| %>
+                    <tr>
+                      <td class="text-center fw-bold"><%= err[:line] %></td>
+                      <td><code><%= err[:message] %></code></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="alert alert-warning mt-3">
+              <i class="bi bi-lightbulb me-1"></i>
+              <strong>Consejo:</strong> Asegúrate de que los encabezados del Excel coincidan exactamente
+              con los elementos definidos en el XSD.
+            </div>
+
+            <div class="d-flex gap-3 mt-4">
+              <%= link_to converter_download_path(filename: @xml_filename, get_file: true),
+                  class: "btn btn-outline-danger" do %>
+                <i class="bi bi-download me-1"></i> Descargar XML de todas formas
+              <% end %>
+              <%= link_to root_path, class: "btn btn-primary" do %>
+                <i class="bi bi-arrow-left me-1"></i> Intentar de nuevo
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+    </div>
+  </div>
+</div>
