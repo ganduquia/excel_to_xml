@@ -8,4 +8,24 @@ Rails.application.routes.draw do
   root "converter#index"
   post "/converter/upload", to: "converter#upload", as: :converter_upload
   get  "/converter/download/:filename", to: "converter#download", as: :converter_download
+
+  namespace :taxes do
+    # Documentos contables
+    resources :documents, only: %i[index show create update destroy] do
+      member do
+        post :liquidate
+        post :cancel
+      end
+    end
+
+    # Tarifas IVA / ReteIVA / ReteICA parametrizables
+    resources :tax_rates, only: %i[index show create update destroy] do
+      collection { get :active }
+    end
+
+    # Conceptos de retención en la fuente
+    resources :withholding_concepts, only: %i[index show create update destroy] do
+      collection { get :applicable }
+    end
+  end
 end
