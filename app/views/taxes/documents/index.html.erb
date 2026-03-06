@@ -1,17 +1,21 @@
 <div class="container py-4">
 
+  <%# ── Cabecera ──────────────────────────────────────────────────────── %>
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <%= link_to taxes_root_path, class: "text-decoration-none text-muted small" do %>
         <i class="bi bi-arrow-left me-1"></i>Dashboard
       <% end %>
-      <h3 class="mb-0 fw-bold mt-1"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Documentos</h3>
+      <h3 class="mb-0 fw-bold mt-1">
+        <i class="bi bi-file-earmark-text me-2 text-primary"></i>Documentos
+      </h3>
     </div>
     <%= link_to new_taxes_document_path, class: "btn btn-primary" do %>
       <i class="bi bi-plus-circle me-2"></i>Nuevo documento
     <% end %>
   </div>
 
+  <%# ── Alertas ────────────────────────────────────────────────────────── %>
   <% if notice %>
     <div class="alert alert-success alert-dismissible fade show">
       <i class="bi bi-check-circle me-2"></i><%= notice %>
@@ -25,19 +29,106 @@
     </div>
   <% end %>
 
+  <%# ── Panel de búsqueda y filtros ──────────────────────────────────── %>
+  <%= form_with url: taxes_documents_path, method: :get, local: true do |f| %>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body py-3">
+        <div class="row g-2 align-items-end">
+
+          <%# Búsqueda de texto %>
+          <div class="col-12 col-md-4">
+            <label class="form-label small fw-semibold mb-1">
+              <i class="bi bi-search me-1"></i>Buscar
+            </label>
+            <%= f.search_field :q,
+                  value: @filter.query,
+                  placeholder: "Número, tercero o NIT...",
+                  class: "form-control form-control-sm" %>
+          </div>
+
+          <%# Tipo de documento %>
+          <div class="col-6 col-md-2">
+            <label class="form-label small fw-semibold mb-1">Tipo</label>
+            <%= f.select :document_type,
+                  [["Factura venta",    "invoice_sale"],
+                   ["Factura compra",   "invoice_purchase"],
+                   ["Nota débito",      "debit_note"],
+                   ["Nota crédito",     "credit_note"]],
+                  { include_blank: "Todos" },
+                  { selected: @filter.document_type, class: "form-select form-select-sm" } %>
+          </div>
+
+          <%# Estado %>
+          <div class="col-6 col-md-2">
+            <label class="form-label small fw-semibold mb-1">Estado</label>
+            <%= f.select :status,
+                  [["Borrador","draft"], ["Activo","active"], ["Cancelado","cancelled"]],
+                  { include_blank: "Todos" },
+                  { selected: @filter.status, class: "form-select form-select-sm" } %>
+          </div>
+
+          <%# Fecha desde %>
+          <div class="col-6 col-md-2">
+            <label class="form-label small fw-semibold mb-1">Desde</label>
+            <%= f.date_field :date_from,
+                  value: @filter.date_from,
+                  class: "form-control form-control-sm" %>
+          </div>
+
+          <%# Fecha hasta %>
+          <div class="col-6 col-md-2">
+            <label class="form-label small fw-semibold mb-1">Hasta</label>
+            <%= f.date_field :date_to,
+                  value: @filter.date_to,
+                  class: "form-control form-control-sm" %>
+          </div>
+
+        </div>
+
+        <div class="d-flex gap-2 mt-2">
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-funnel me-1"></i>Filtrar
+          </button>
+          <% if @filter.active? %>
+            <%= link_to taxes_documents_path, class: "btn btn-sm btn-outline-secondary" do %>
+              <i class="bi bi-x-circle me-1"></i>Limpiar filtros
+            <% end %>
+          <% end %>
+        </div>
+
+      </div>
+    </div>
+  <% end %>
+
+  <%# ── Tabla de documentos ─────────────────────────────────────────── %>
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
       <small class="text-muted">
-        Mostrando <strong><%= @documents.count %></strong> de <strong><%= @documents.total_count %></strong> documentos
+        <% if @filter.active? %>
+          <i class="bi bi-funnel-fill me-1 text-primary"></i>
+          <strong><%= @documents.total_count %></strong> resultado(s) encontrado(s)
+        <% else %>
+          Mostrando <strong><%= @documents.count %></strong>
+          de <strong><%= @documents.total_count %></strong> documentos
+        <% end %>
       </small>
-      <small class="text-muted">Página <%= @documents.current_page %> de <%= @documents.total_pages %></small>
+      <small class="text-muted">
+        Página <%= @documents.current_page %> de <%= [@documents.total_pages, 1].max %>
+      </small>
     </div>
+
     <div class="card-body p-0">
       <% if @documents.empty? %>
         <div class="text-center text-muted py-5">
-          <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-          No hay documentos registrados.
-          <%= link_to "Crear el primero", new_taxes_document_path, class: "btn btn-primary mt-2" %>
+          <i class="bi bi-<%= @filter.active? ? 'search' : 'inbox' %> fs-1 d-block mb-2"></i>
+          <% if @filter.active? %>
+            No se encontraron documentos con esos criterios.
+            <br>
+            <%= link_to "Limpiar filtros", taxes_documents_path, class: "btn btn-outline-secondary btn-sm mt-2" %>
+          <% else %>
+            No hay documentos registrados.
+            <%= link_to "Crear el primero", new_taxes_document_path, class: "btn btn-primary mt-2" %>
+          <% end %>
         </div>
       <% else %>
         <div class="table-responsive">
@@ -59,11 +150,15 @@
             <tbody>
               <% @documents.each do |doc| %>
                 <tr>
-                  <td class="fw-semibold"><%= doc.number %></td>
-                  <td><span class="badge bg-secondary"><%= t_document_type(doc.document_type) %></span></td>
+                  <td class="fw-semibold">
+                    <%= highlight(doc.number, @filter.query) %>
+                  </td>
                   <td>
-                    <div><%= doc.third_party_name %></div>
-                    <small class="text-muted"><%= doc.third_party_nit %></small>
+                    <span class="badge bg-secondary"><%= t_document_type(doc.document_type) %></span>
+                  </td>
+                  <td>
+                    <div><%= highlight(doc.third_party_name, @filter.query) %></div>
+                    <small class="text-muted"><%= highlight(doc.third_party_nit, @filter.query) %></small>
                   </td>
                   <td><%= doc.issue_date&.strftime("%d/%m/%Y") %></td>
                   <td class="text-end"><%= format_cop(doc.subtotal_cents) %></td>
@@ -77,7 +172,8 @@
                         <i class="bi bi-eye"></i>
                       <% end %>
                       <% unless doc.cancelled? %>
-                        <%= button_to liquidate_taxes_document_path(doc), method: :post, class: "btn btn-sm btn-primary",
+                        <%= button_to liquidate_taxes_document_path(doc), method: :post,
+                              class: "btn btn-sm btn-primary",
                               data: { confirm: "¿Liquidar impuestos del documento #{doc.number}?" } do %>
                           <i class="bi bi-calculator"></i>
                         <% end %>
@@ -92,22 +188,35 @@
       <% end %>
     </div>
 
+    <%# ── Paginación (preserva filtros) ──────────────────────────────── %>
     <% if @documents.total_pages > 1 %>
       <div class="card-footer bg-white d-flex justify-content-center">
         <nav>
           <ul class="pagination pagination-sm mb-0">
+            <% filter_params = { q: @filter.query, document_type: @filter.document_type,
+                                  status: @filter.status, date_from: @filter.date_from,
+                                  date_to: @filter.date_to } %>
+
             <% if @documents.first_page? %>
               <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-double-left"></i></span></li>
               <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
             <% else %>
-              <li class="page-item"><%= link_to taxes_documents_path(page: 1), class: "page-link" do %><i class="bi bi-chevron-double-left"></i><% end %></li>
-              <li class="page-item"><%= link_to taxes_documents_path(page: @documents.prev_page), class: "page-link" do %><i class="bi bi-chevron-left"></i><% end %></li>
+              <li class="page-item">
+                <%= link_to taxes_documents_path(filter_params.merge(page: 1)), class: "page-link" do %>
+                  <i class="bi bi-chevron-double-left"></i>
+                <% end %>
+              </li>
+              <li class="page-item">
+                <%= link_to taxes_documents_path(filter_params.merge(page: @documents.prev_page)), class: "page-link" do %>
+                  <i class="bi bi-chevron-left"></i>
+                <% end %>
+              </li>
             <% end %>
 
             <% (@documents.current_page - 2 .. @documents.current_page + 2).each do |p| %>
               <% next if p < 1 || p > @documents.total_pages %>
               <li class="page-item <%= 'active' if p == @documents.current_page %>">
-                <%= link_to p, taxes_documents_path(page: p), class: "page-link" %>
+                <%= link_to p, taxes_documents_path(filter_params.merge(page: p)), class: "page-link" %>
               </li>
             <% end %>
 
@@ -115,12 +224,21 @@
               <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
               <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-double-right"></i></span></li>
             <% else %>
-              <li class="page-item"><%= link_to taxes_documents_path(page: @documents.next_page), class: "page-link" do %><i class="bi bi-chevron-right"></i><% end %></li>
-              <li class="page-item"><%= link_to taxes_documents_path(page: @documents.total_pages), class: "page-link" do %><i class="bi bi-chevron-double-right"></i><% end %></li>
+              <li class="page-item">
+                <%= link_to taxes_documents_path(filter_params.merge(page: @documents.next_page)), class: "page-link" do %>
+                  <i class="bi bi-chevron-right"></i>
+                <% end %>
+              </li>
+              <li class="page-item">
+                <%= link_to taxes_documents_path(filter_params.merge(page: @documents.total_pages)), class: "page-link" do %>
+                  <i class="bi bi-chevron-double-right"></i>
+                <% end %>
+              </li>
             <% end %>
           </ul>
         </nav>
       </div>
     <% end %>
   </div>
+
 </div>

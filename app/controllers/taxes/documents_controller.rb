@@ -3,7 +3,11 @@ module Taxes
     before_action :set_document, only: %i[show destroy liquidate cancel]
 
     def index
-      @documents = TaxDocument.order(issue_date: :desc, id: :desc).page(params[:page]).per(10)
+      @filter    = DocumentFilter.new(params)
+      @documents = @filter
+                     .apply(TaxDocument.all)
+                     .order(issue_date: :desc, id: :desc)
+                     .page(params[:page]).per(10)
     end
 
     def show
