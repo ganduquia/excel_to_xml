@@ -50,10 +50,16 @@
               <td class="text-muted small" style="max-width:200px"><%= rate.notes&.truncate(60) %></td>
               <td>
                 <% if rate.active? %>
-                  <%= button_to taxes_tax_rate_path(rate), method: :delete,
+                  <%= button_to toggle_taxes_tax_rate_path(rate), method: :patch,
                         class: "btn btn-sm btn-outline-danger",
                         data: { confirm: "¿Desactivar la tarifa '#{rate.name}'?" } do %>
-                    <i class="bi bi-toggle-on"></i>
+                    <i class="bi bi-toggle-on me-1"></i>Desactivar
+                  <% end %>
+                <% else %>
+                  <%= button_to toggle_taxes_tax_rate_path(rate), method: :patch,
+                        class: "btn btn-sm btn-outline-success",
+                        data: { confirm: "¿Activar la tarifa '#{rate.name}'?" } do %>
+                    <i class="bi bi-toggle-off me-1"></i>Activar
                   <% end %>
                 <% end %>
               </td>

@@ -17,9 +17,11 @@ module Taxes
       end
     end
 
-    def destroy
-      TaxRate.find(params[:id]).update!(active: false)
-      redirect_to taxes_tax_rates_path, notice: "Tarifa desactivada."
+    def toggle
+      rate = TaxRate.find(params[:id])
+      rate.update!(active: !rate.active)
+      msg = rate.active? ? "Tarifa activada." : "Tarifa desactivada."
+      redirect_to taxes_tax_rates_path, notice: msg
     rescue ActiveRecord::RecordNotFound
       redirect_to taxes_tax_rates_path, alert: "Tarifa no encontrada."
     end

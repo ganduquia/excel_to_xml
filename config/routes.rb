@@ -20,8 +20,12 @@ Rails.application.routes.draw do
       end
     end
 
-    resources :tax_rates, only: %i[index new create destroy]
+    resources :tax_rates, only: %i[index new create] do
+      member { patch :toggle }
+    end
 
-    resources :withholding_concepts, only: %i[index new create destroy]
+    resources :withholding_concepts, only: %i[index new create] do
+      member { patch :toggle }
+    end
   end
 end

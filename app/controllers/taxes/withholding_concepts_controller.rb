@@ -17,9 +17,11 @@ module Taxes
       end
     end
 
-    def destroy
-      WithholdingConcept.find(params[:id]).update!(active: false)
-      redirect_to taxes_withholding_concepts_path, notice: "Concepto desactivado."
+    def toggle
+      concept = WithholdingConcept.find(params[:id])
+      concept.update!(active: !concept.active)
+      msg = concept.active? ? "Concepto activado." : "Concepto desactivado."
+      redirect_to taxes_withholding_concepts_path, notice: msg
     rescue ActiveRecord::RecordNotFound
       redirect_to taxes_withholding_concepts_path, alert: "Concepto no encontrado."
     end

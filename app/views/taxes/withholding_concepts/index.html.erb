@@ -52,10 +52,16 @@
               </td>
               <td>
                 <% if c.active? %>
-                  <%= button_to taxes_withholding_concept_path(c), method: :delete,
+                  <%= button_to toggle_taxes_withholding_concept_path(c), method: :patch,
                         class: "btn btn-sm btn-outline-danger",
                         data: { confirm: "¿Desactivar '#{c.name}'?" } do %>
-                    <i class="bi bi-toggle-on"></i>
+                    <i class="bi bi-toggle-on me-1"></i>Desactivar
+                  <% end %>
+                <% else %>
+                  <%= button_to toggle_taxes_withholding_concept_path(c), method: :patch,
+                        class: "btn btn-sm btn-outline-success",
+                        data: { confirm: "¿Activar '#{c.name}'?" } do %>
+                    <i class="bi bi-toggle-off me-1"></i>Activar
                   <% end %>
                 <% end %>
               </td>
