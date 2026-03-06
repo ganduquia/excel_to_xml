@@ -1,0 +1,202 @@
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <%= link_to taxes_documents_path, class: "text-decoration-none text-muted small" do %>
+        <i class="bi bi-arrow-left me-1"></i>Documentos
+      <% end %>
+      <h3 class="mb-0 fw-bold mt-1">
+        <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+        <%= @document.number %>
+        <%= status_badge(@document.status) %>
+      </h3>
+    </div>
+    <div class="d-flex gap-2">
+      <% unless @document.cancelled? %>
+        <%= button_to liquidate_taxes_document_path(@document), method: :post,
+              class: "btn btn-primary",
+              data: { confirm: "¿Liquidar impuestos de este documento?" } do %>
+          <i class="bi bi-calculator me-2"></i>Liquidar impuestos
+        <% end %>
+        <%= button_to cancel_taxes_document_path(@document), method: :post,
+              class: "btn btn-outline-danger",
+              data: { confirm: "¿Cancelar este documento? Esta acción no se puede deshacer." } do %>
+          <i class="bi bi-x-circle me-2"></i>Cancelar
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <% if notice %>
+    <div class="alert alert-success alert-dismissible fade show">
+      <i class="bi bi-check-circle me-2"></i><%= notice %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+  <% if alert %>
+    <div class="alert alert-warning alert-dismissible fade show">
+      <i class="bi bi-exclamation-triangle me-2"></i><%= alert %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+
+  <div class="row g-3">
+
+    <%# ── Info del documento ──────────────────────────────────────────── %>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-info-circle me-2 text-primary"></i>Información del documento
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-5 text-muted">Tipo</dt>
+            <dd class="col-7"><%= t_document_type(@document.document_type) %></dd>
+            <dt class="col-5 text-muted">Número</dt>
+            <dd class="col-7 fw-semibold"><%= @document.number %></dd>
+            <dt class="col-5 text-muted">Fecha</dt>
+            <dd class="col-7"><%= @document.issue_date&.strftime("%d/%m/%Y") %></dd>
+            <dt class="col-5 text-muted">Moneda</dt>
+            <dd class="col-7"><%= @document.currency %></dd>
+            <dt class="col-5 text-muted">Notas</dt>
+            <dd class="col-7"><%= @document.notes.presence || "—" %></dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <%# ── Info del tercero ────────────────────────────────────────────── %>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-building me-2 text-primary"></i>Tercero
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-5 text-muted">Nombre</dt>
+            <dd class="col-7 fw-semibold"><%= @document.third_party_name %></dd>
+            <dt class="col-5 text-muted">NIT</dt>
+            <dd class="col-7"><%= @document.third_party_nit %></dd>
+            <dt class="col-5 text-muted">Tipo contribuyente</dt>
+            <dd class="col-7"><%= t_taxpayer_type(@document.taxpayer_type) %></dd>
+            <dt class="col-5 text-muted">Agente retención</dt>
+            <dd class="col-7"><%= @document.is_withholding_agent? ? "Sí" : "No" %></dd>
+            <dt class="col-5 text-muted">Autorretenedor</dt>
+            <dd class="col-7"><%= @document.third_party_autoretainer? ? "Sí" : "No" %></dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <%# ── Ítems ───────────────────────────────────────────────────────── %>
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-list-ul me-2 text-primary"></i>Ítems del documento
+        </div>
+        <div class="table-responsive">
+          <table class="table mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Descripción</th>
+                <th class="text-end">Cantidad</th>
+                <th class="text-end">Precio unit.</th>
+                <th class="text-end">Descuento</th>
+                <th class="text-end">Subtotal</th>
+                <th>Estado IVA</th>
+                <th class="text-end">IVA</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @document.document_items.each do |item| %>
+                <tr>
+                  <td><%= item.description %></td>
+                  <td class="text-end"><%= item.quantity %></td>
+                  <td class="text-end"><%= format_cop(item.unit_price_cents) %></td>
+                  <td class="text-end"><%= format_cop(item.discount_cents) %></td>
+                  <td class="text-end fw-semibold"><%= format_cop(item.subtotal_cents) %></td>
+                  <td><%= tax_status_badge(item.tax_status) %></td>
+                  <td class="text-end text-danger"><%= format_cop(item.tax_amount_cents) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+            <tfoot class="table-light fw-semibold">
+              <tr>
+                <td colspan="4" class="text-end">Subtotal</td>
+                <td class="text-end"><%= format_cop(@document.subtotal_cents) %></td>
+                <td></td><td></td>
+              </tr>
+              <tr>
+                <td colspan="4" class="text-end text-danger">+ IVA</td>
+                <td colspan="2"></td>
+                <td class="text-end text-danger"><%= format_cop(@document.total_iva_cents) %></td>
+              </tr>
+              <tr>
+                <td colspan="4" class="text-end text-success">− Retenciones</td>
+                <td colspan="3" class="text-end text-success"><%= format_cop(@document.total_withholding_cents) %></td>
+              </tr>
+              <tr class="table-primary">
+                <td colspan="4" class="text-end fs-6">Total a pagar</td>
+                <td colspan="3" class="text-end fs-6"><%= format_cop(@document.total_cents) %></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <%# ── Líneas de impuesto ──────────────────────────────────────────── %>
+    <% if @tax_lines.any? %>
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white border-bottom fw-semibold">
+            <i class="bi bi-receipt me-2 text-primary"></i>Líneas de impuesto liquidadas
+          </div>
+          <div class="table-responsive">
+            <table class="table mb-0 align-middle small">
+              <thead class="table-light">
+                <tr>
+                  <th>Tipo</th>
+                  <th>Concepto</th>
+                  <th class="text-end">Base</th>
+                  <th class="text-end">Tarifa</th>
+                  <th class="text-end">Valor</th>
+                  <th>Dirección</th>
+                  <th>Calculado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @tax_lines.each do |line| %>
+                  <tr>
+                    <td><span class="badge bg-primary"><%= line.tax_type.upcase %></span></td>
+                    <td><%= line.withholding_concept&.name || "IVA" %></td>
+                    <td class="text-end"><%= format_cop(line.base_cents) %></td>
+                    <td class="text-end"><%= line.rate_snapshot %>%</td>
+                    <td class="text-end fw-semibold
+                      <%= line.direction == 'charge' ? 'text-danger' : 'text-success' %>">
+                      <%= line.direction == 'credit' ? '−' : '+' %><%= format_cop(line.amount_cents) %>
+                    </td>
+                    <td>
+                      <span class="badge <%= line.direction == 'charge' ? 'bg-danger' : 'bg-success' %>">
+                        <%= line.direction == 'charge' ? 'Cargo' : 'Crédito' %>
+                      </span>
+                    </td>
+                    <td class="text-muted"><%= line.calculated_at&.strftime("%d/%m %H:%M") %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    <% else %>
+      <div class="col-12">
+        <div class="alert alert-info mb-0">
+          <i class="bi bi-info-circle me-2"></i>
+          Aún no se han liquidado impuestos. Haz clic en <strong>Liquidar impuestos</strong> para calcularlos.
+        </div>
+      </div>
+    <% end %>
+
+  </div>
+</div>

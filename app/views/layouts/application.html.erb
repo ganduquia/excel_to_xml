@@ -49,11 +49,16 @@
   </head>
 
   <body>
-    <nav class="navbar navbar-dark bg-primary">
+    <nav class="navbar navbar-expand navbar-dark bg-primary">
       <div class="container">
-        <span class="navbar-brand">
+        <a class="navbar-brand" href="/">
           <i class="bi bi-file-earmark-code me-2"></i>Excel → XML
-        </span>
+        </a>
+        <div class="navbar-nav ms-3">
+          <a class="nav-link <%= 'active' if request.path.start_with?('/taxes') %>" href="/taxes">
+            <i class="bi bi-receipt-cutoff me-1"></i>Impuestos
+          </a>
+        </div>
       </div>
     </nav>
 

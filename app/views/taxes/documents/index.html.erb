@@ -1,0 +1,89 @@
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <%= link_to taxes_root_path, class: "text-decoration-none text-muted small" do %>
+        <i class="bi bi-arrow-left me-1"></i>Dashboard
+      <% end %>
+      <h3 class="mb-0 fw-bold mt-1"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Documentos</h3>
+    </div>
+    <%= link_to new_taxes_document_path, class: "btn btn-primary" do %>
+      <i class="bi bi-plus-circle me-2"></i>Nuevo documento
+    <% end %>
+  </div>
+
+  <% if notice %>
+    <div class="alert alert-success alert-dismissible fade show">
+      <i class="bi bi-check-circle me-2"></i><%= notice %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+  <% if alert %>
+    <div class="alert alert-warning alert-dismissible fade show">
+      <i class="bi bi-exclamation-triangle me-2"></i><%= alert %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <% if @documents.empty? %>
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+          No hay documentos registrados.
+          <%= link_to "Crear el primero", new_taxes_document_path, class: "btn btn-primary mt-2" %>
+        </div>
+      <% else %>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Número</th>
+                <th>Tipo</th>
+                <th>Tercero / NIT</th>
+                <th>Fecha</th>
+                <th class="text-end">Subtotal</th>
+                <th class="text-end">IVA</th>
+                <th class="text-end">Retenciones</th>
+                <th class="text-end">Total a pagar</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @documents.each do |doc| %>
+                <tr>
+                  <td class="fw-semibold"><%= doc.number %></td>
+                  <td><span class="badge bg-secondary"><%= t_document_type(doc.document_type) %></span></td>
+                  <td>
+                    <div><%= doc.third_party_name %></div>
+                    <small class="text-muted"><%= doc.third_party_nit %></small>
+                  </td>
+                  <td><%= doc.issue_date&.strftime("%d/%m/%Y") %></td>
+                  <td class="text-end"><%= format_cop(doc.subtotal_cents) %></td>
+                  <td class="text-end text-danger"><%= format_cop(doc.total_iva_cents) %></td>
+                  <td class="text-end text-success"><%= format_cop(doc.total_withholding_cents) %></td>
+                  <td class="text-end fw-semibold"><%= format_cop(doc.total_cents) %></td>
+                  <td><%= status_badge(doc.status) %></td>
+                  <td>
+                    <div class="d-flex gap-1">
+                      <%= link_to taxes_document_path(doc), class: "btn btn-sm btn-outline-secondary" do %>
+                        <i class="bi bi-eye"></i>
+                      <% end %>
+                      <% unless doc.cancelled? %>
+                        <%= button_to liquidate_taxes_document_path(doc), method: :post, class: "btn btn-sm btn-primary",
+                              data: { confirm: "¿Liquidar impuestos del documento #{doc.number}?" } do %>
+                          <i class="bi bi-calculator"></i>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

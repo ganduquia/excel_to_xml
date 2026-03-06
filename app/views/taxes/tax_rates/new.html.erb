@@ -1,0 +1,56 @@
+<div class="container py-4" style="max-width:600px">
+
+  <div class="mb-4">
+    <%= link_to taxes_tax_rates_path, class: "text-decoration-none text-muted small" do %>
+      <i class="bi bi-arrow-left me-1"></i>Tarifas
+    <% end %>
+    <h3 class="mb-0 fw-bold mt-1"><i class="bi bi-plus-circle me-2 text-primary"></i>Nueva tarifa</h3>
+  </div>
+
+  <% if @rate.errors.any? %>
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        <% @rate.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= form_with model: @rate, url: taxes_tax_rates_path, local: true do |f| %>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <%= f.label :name, "Nombre", class: "form-label fw-semibold" %>
+            <%= f.text_field :name, placeholder: "Ej: IVA General 19%", class: "form-control" %>
+          </div>
+          <div class="col-md-6">
+            <%= f.label :tax_type, "Tipo", class: "form-label fw-semibold" %>
+            <%= f.select :tax_type, [["IVA","iva"],["ReteIVA","reteiva"],["ReteICA","reteica"]],
+                  { prompt: "Seleccionar..." }, class: "form-select" %>
+          </div>
+          <div class="col-md-6">
+            <%= f.label :rate, "Tarifa (%)", class: "form-label fw-semibold" %>
+            <%= f.number_field :rate, min: 0, max: 99, step: 0.01, placeholder: "Ej: 19.0", class: "form-control" %>
+          </div>
+          <div class="col-md-6">
+            <%= f.label :effective_from, "Vigente desde", class: "form-label fw-semibold" %>
+            <%= f.date_field :effective_from, class: "form-control" %>
+          </div>
+          <div class="col-md-6">
+            <%= f.label :effective_to, "Vigente hasta", class: "form-label fw-semibold" %>
+            <%= f.date_field :effective_to, class: "form-control" %>
+            <div class="form-text">Dejar vacío si no tiene vencimiento</div>
+          </div>
+          <div class="col-12">
+            <%= f.label :notes, "Notas / normativa", class: "form-label fw-semibold" %>
+            <%= f.text_area :notes, rows: 3, class: "form-control" %>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-white d-flex gap-2 justify-content-end">
+        <%= link_to "Cancelar", taxes_tax_rates_path, class: "btn btn-outline-secondary" %>
+        <%= f.submit "Guardar tarifa", class: "btn btn-primary" %>
+      </div>
+    </div>
+  <% end %>
+</div>

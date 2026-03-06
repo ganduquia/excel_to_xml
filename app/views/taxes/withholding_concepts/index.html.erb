@@ -1,0 +1,68 @@
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <%= link_to taxes_root_path, class: "text-decoration-none text-muted small" do %>
+        <i class="bi bi-arrow-left me-1"></i>Dashboard
+      <% end %>
+      <h3 class="mb-0 fw-bold mt-1"><i class="bi bi-bank me-2 text-primary"></i>Conceptos de Retención en la Fuente</h3>
+    </div>
+    <%= link_to new_taxes_withholding_concept_path, class: "btn btn-primary" do %>
+      <i class="bi bi-plus-circle me-2"></i>Nuevo concepto
+    <% end %>
+  </div>
+
+  <% if notice %>
+    <div class="alert alert-success alert-dismissible fade show">
+      <i class="bi bi-check-circle me-2"></i><%= notice %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle small">
+        <thead class="table-light">
+          <tr>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th class="text-end">Tarifa</th>
+            <th class="text-end">Cuantía mínima</th>
+            <th>Contribuyente</th>
+            <th>Base</th>
+            <th>Vigencia</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @concepts.each do |c| %>
+            <tr>
+              <td><code><%= c.code %></code></td>
+              <td><%= c.name %></td>
+              <td class="text-end fw-bold text-primary"><%= c.rate %>%</td>
+              <td class="text-end"><%= format_cop(c.min_amount_cents) %></td>
+              <td><span class="badge bg-secondary"><%= c.taxpayer_type %></span></td>
+              <td><span class="badge bg-light text-dark"><%= c.base_type %></span></td>
+              <td class="text-muted"><%= c.effective_from&.strftime("%d/%m/%Y") %></td>
+              <td>
+                <span class="badge <%= c.active? ? 'bg-success' : 'bg-secondary' %>">
+                  <%= c.active? ? "Activo" : "Inactivo" %>
+                </span>
+              </td>
+              <td>
+                <% if c.active? %>
+                  <%= button_to taxes_withholding_concept_path(c), method: :delete,
+                        class: "btn btn-sm btn-outline-danger",
+                        data: { confirm: "¿Desactivar '#{c.name}'?" } do %>
+                    <i class="bi bi-toggle-on"></i>
+                  <% end %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

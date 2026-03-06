@@ -1,83 +1,66 @@
 module Taxes
   class DocumentsController < ApplicationController
-    before_action :set_document, only: %i[show update destroy liquidate cancel]
+    before_action :set_document, only: %i[show destroy liquidate cancel]
 
-    # GET /taxes/documents
     def index
-      @documents = TaxDocument.all.order(issue_date: :desc)
-      render json: documents_json(@documents)
+      @documents = TaxDocument.order(issue_date: :desc)
     end
 
-    # GET /taxes/documents/:id
     def show
-      render json: document_json(@document)
+      @tax_lines = @document.tax_lines.includes(:withholding_concept)
     end
 
-    # POST /taxes/documents
+    def new
+      @document = TaxDocument.new(issue_date: Date.today, currency: "COP")
+      @document.document_items.build
+      @tax_rates = TaxRate.where(tax_type: "iva", active: true).order(:rate)
+    end
+
     def create
       @document = TaxDocument.new(document_params)
       if @document.save
-        render json: document_json(@document), status: :created
+        redirect_to taxes_document_path(@document), notice: "Documento creado correctamente."
       else
-        render json: { errors: @document.errors.full_messages }, status: :unprocessable_entity
+        @tax_rates = TaxRate.where(tax_type: "iva", active: true).order(:rate)
+        render :new, status: :unprocessable_entity
       end
     end
 
-    # PATCH /taxes/documents/:id
-    def update
-      if @document.cancelled?
-        return render json: { error: "No se puede modificar un documento cancelado" }, status: :unprocessable_entity
-      end
-      if @document.update(document_params)
-        render json: document_json(@document)
-      else
-        render json: { errors: @document.errors.full_messages }, status: :unprocessable_entity
-      end
-    end
-
-    # DELETE /taxes/documents/:id
     def destroy
       if @document.cancelled?
-        render json: { error: "Ya está cancelado" }, status: :unprocessable_entity
+        redirect_to taxes_documents_path, alert: "El documento ya está cancelado."
       else
         @document.cancel!
-        render json: { message: "Documento cancelado correctamente", id: @document.id }
+        redirect_to taxes_documents_path, notice: "Documento cancelado."
       end
     end
 
-    # POST /taxes/documents/:id/liquidate
-    # Calcula y persiste todos los impuestos del documento
     def liquidate
       result = Taxes::TaxLiquidator.call(@document)
       if result[:success]
-        render json: {
-          message:   "Liquidación exitosa",
-          document:  document_json(@document),
-          resultado: result[:summary],
-          iva_lines: result[:iva_lines].map { |l| tax_line_json(l) },
-          withholding_lines: result[:withholding_lines].map { |l| tax_line_json(l) }
-        }
+        redirect_to taxes_document_path(@document),
+                    notice: "Liquidación exitosa — #{result[:summary][:total_a_pagar]}"
       else
-        render json: { errors: result[:errors] }, status: :unprocessable_entity
+        redirect_to taxes_document_path(@document),
+                    alert: result[:errors].join(", ")
       end
     end
 
-    # POST /taxes/documents/:id/cancel
     def cancel
       if @document.cancelled?
-        render json: { error: "El documento ya está cancelado" }, status: :unprocessable_entity
+        redirect_to taxes_document_path(@document), alert: "Ya está cancelado."
       else
         @document.cancel!
-        render json: { message: "Documento cancelado", id: @document.id }
+        redirect_to taxes_documents_path, notice: "Documento cancelado correctamente."
       end
     end
 
     private
 
     def set_document
-      @document = TaxDocument.includes(:document_items, :tax_lines).find(params[:id])
+      @document = TaxDocument.includes(:document_items, tax_lines: :withholding_concept).find(params[:id])
     rescue ActiveRecord::RecordNotFound
-      render json: { error: "Documento no encontrado" }, status: :not_found
+      redirect_to taxes_documents_path, alert: "Documento no encontrado."
     end
 
     def document_params
@@ -85,50 +68,12 @@ module Taxes
         :document_type, :number, :issue_date,
         :third_party_nit, :third_party_name,
         :taxpayer_type, :is_withholding_agent,
-        :third_party_autoretainer, :currency,
-        :original_document_id, :notes,
+        :third_party_autoretainer, :currency, :notes,
         document_items_attributes: %i[
           id description quantity unit_price_cents
           discount_cents tax_status tax_rate_id _destroy
         ]
       )
-    end
-
-    def documents_json(documents)
-      documents.map { |d| document_json(d) }
-    end
-
-    def document_json(doc)
-      {
-        id:                      doc.id,
-        document_type:           doc.document_type,
-        number:                  doc.number,
-        issue_date:              doc.issue_date,
-        third_party_nit:         doc.third_party_nit,
-        third_party_name:        doc.third_party_name,
-        taxpayer_type:           doc.taxpayer_type,
-        is_withholding_agent:    doc.is_withholding_agent,
-        third_party_autoretainer: doc.third_party_autoretainer,
-        status:                  doc.status,
-        subtotal_cents:          doc.subtotal_cents,
-        total_iva_cents:         doc.total_iva_cents,
-        total_withholding_cents: doc.total_withholding_cents,
-        total_cents:             doc.total_cents,
-        currency:                doc.currency,
-        items_count:             doc.document_items.size,
-        tax_lines_count:         doc.tax_lines.size
-      }
-    end
-
-    def tax_line_json(line)
-      {
-        tax_type:      line.tax_type,
-        direction:     line.direction,
-        rate_snapshot: line.rate_snapshot,
-        base_cents:    line.base_cents,
-        amount_cents:  line.amount_cents,
-        detail:        line.calculation_detail_parsed
-      }
     end
   end
 end

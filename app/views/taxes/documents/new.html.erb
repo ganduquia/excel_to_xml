@@ -1,0 +1,203 @@
+<div class="container py-4" style="max-width:860px">
+
+  <div class="mb-4">
+    <%= link_to taxes_documents_path, class: "text-decoration-none text-muted small" do %>
+      <i class="bi bi-arrow-left me-1"></i>Documentos
+    <% end %>
+    <h3 class="mb-0 fw-bold mt-1"><i class="bi bi-plus-circle me-2 text-primary"></i>Nuevo documento</h3>
+  </div>
+
+  <% if @document.errors.any? %>
+    <div class="alert alert-danger">
+      <strong><i class="bi bi-exclamation-triangle me-2"></i><%= @document.errors.count %> error(es):</strong>
+      <ul class="mb-0 mt-1">
+        <% @document.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= form_with model: @document, url: taxes_documents_path, local: true do |f| %>
+
+    <%# ── Datos del documento ──────────────────────────────────────────── %>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="bi bi-file-earmark me-2 text-primary"></i>Datos del documento
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <%= f.label :document_type, "Tipo de documento", class: "form-label fw-semibold" %>
+            <%= f.select :document_type,
+                  [["Factura de venta","invoice_sale"],["Factura de compra","invoice_purchase"],
+                   ["Nota débito","debit_note"],["Nota crédito","credit_note"]],
+                  { prompt: "Seleccionar..." },
+                  class: "form-select #{'is-invalid' if @document.errors[:document_type].any?}" %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :number, "Número", class: "form-label fw-semibold" %>
+            <%= f.text_field :number, placeholder: "Ej: FV-2026-001",
+                  class: "form-control #{'is-invalid' if @document.errors[:number].any?}" %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :issue_date, "Fecha", class: "form-label fw-semibold" %>
+            <%= f.date_field :issue_date,
+                  class: "form-control #{'is-invalid' if @document.errors[:issue_date].any?}" %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :currency, "Moneda", class: "form-label fw-semibold" %>
+            <%= f.select :currency, [["COP - Peso colombiano","COP"],["USD - Dólar","USD"]],
+                  {}, class: "form-select" %>
+          </div>
+          <div class="col-md-8">
+            <%= f.label :notes, "Notas", class: "form-label fw-semibold" %>
+            <%= f.text_area :notes, rows: 2, placeholder: "Observaciones opcionales...",
+                  class: "form-control" %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# ── Datos del tercero ────────────────────────────────────────────── %>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="bi bi-building me-2 text-primary"></i>Tercero (proveedor / cliente)
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <%= f.label :third_party_nit, "NIT", class: "form-label fw-semibold" %>
+            <%= f.text_field :third_party_nit, placeholder: "Ej: 900123456-1",
+                  class: "form-control #{'is-invalid' if @document.errors[:third_party_nit].any?}" %>
+            <div class="form-text">Sin puntos, con dígito de verificación</div>
+          </div>
+          <div class="col-md-8">
+            <%= f.label :third_party_name, "Nombre / Razón social", class: "form-label fw-semibold" %>
+            <%= f.text_field :third_party_name, placeholder: "Ej: Empresa S.A.S.",
+                  class: "form-control #{'is-invalid' if @document.errors[:third_party_name].any?}" %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :taxpayer_type, "Tipo contribuyente", class: "form-label fw-semibold" %>
+            <%= f.select :taxpayer_type,
+                  [["Declarante","declarante"],["No declarante","no_declarante"],
+                   ["Gran contribuyente","gran_contribuyente"],["Autorretenedor","autorretenedor"],
+                   ["Régimen simple","regimen_simple"],["No responsable IVA","no_responsable_iva"]],
+                  { prompt: "Seleccionar..." },
+                  class: "form-select #{'is-invalid' if @document.errors[:taxpayer_type].any?}" %>
+          </div>
+          <div class="col-md-4 d-flex align-items-end pb-1">
+            <div class="form-check">
+              <%= f.check_box :is_withholding_agent, class: "form-check-input" %>
+              <%= f.label :is_withholding_agent, "Agente de retención", class: "form-check-label" %>
+            </div>
+          </div>
+          <div class="col-md-4 d-flex align-items-end pb-1">
+            <div class="form-check">
+              <%= f.check_box :third_party_autoretainer, class: "form-check-input" %>
+              <%= f.label :third_party_autoretainer, "Tercero autorretenedor", class: "form-check-label" %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# ── Ítems ───────────────────────────────────────────────────────── %>
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-list-ul me-2 text-primary"></i>Ítems</span>
+        <button type="button" class="btn btn-sm btn-primary" id="add-item">
+          <i class="bi bi-plus me-1"></i>Agregar ítem
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0 align-middle" id="items-table">
+            <thead class="table-light">
+              <tr>
+                <th>Descripción</th>
+                <th style="width:80px">Cantidad</th>
+                <th style="width:130px">Precio (COP)</th>
+                <th style="width:110px">Descuento</th>
+                <th style="width:110px">Estado IVA</th>
+                <th style="width:130px">Tarifa IVA</th>
+                <th style="width:40px"></th>
+              </tr>
+            </thead>
+            <tbody id="items-body">
+              <%= f.fields_for :document_items do |item_f| %>
+                <%= render "item_fields", f: item_f %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <%= link_to "Cancelar", taxes_documents_path, class: "btn btn-outline-secondary" %>
+      <%= f.submit "Guardar documento", class: "btn btn-primary px-4" %>
+    </div>
+
+  <% end %>
+</div>
+
+<%# Template oculto para nuevos ítems dinámicos %>
+<template id="item-template">
+  <tr class="item-row">
+    <td><input type="text" name="tax_document[document_items_attributes][IDX][description]" placeholder="Descripción del ítem" class="form-control form-control-sm" required></td>
+    <td><input type="number" name="tax_document[document_items_attributes][IDX][quantity]" value="1" min="0.01" step="0.01" class="form-control form-control-sm"></td>
+    <td><input type="number" name="tax_document[document_items_attributes][IDX][unit_price_cents]" placeholder="0" min="0" step="1" class="form-control form-control-sm"></td>
+    <td><input type="number" name="tax_document[document_items_attributes][IDX][discount_cents]" value="0" min="0" step="1" class="form-control form-control-sm"></td>
+    <td>
+      <select name="tax_document[document_items_attributes][IDX][tax_status]" class="form-select form-select-sm tax-status-select">
+        <option value="taxed">Gravado</option>
+        <option value="excluded">Excluido</option>
+        <option value="exempt">Exento</option>
+      </select>
+    </td>
+    <td>
+      <select name="tax_document[document_items_attributes][IDX][tax_rate_id]" class="form-select form-select-sm tax-rate-select">
+        <option value="">— Sin tarifa —</option>
+        <% @tax_rates.each do |rate| %>
+          <option value="<%= rate.id %>"><%= rate.name %></option>
+        <% end %>
+      </select>
+    </td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger remove-item"><i class="bi bi-trash"></i></button></td>
+  </tr>
+</template>
+
+<script>
+  let itemIndex = <%= @document.document_items.count %>;
+
+  document.getElementById("add-item").addEventListener("click", function () {
+    const template = document.getElementById("item-template").innerHTML
+                       .replace(/IDX/g, itemIndex++);
+    const row = document.createElement("tbody");
+    row.innerHTML = template;
+    const newRow = row.firstElementChild;
+    document.getElementById("items-body").appendChild(newRow);
+    bindRemove(newRow);
+    bindTaxStatus(newRow);
+  });
+
+  function bindRemove(row) {
+    row.querySelector(".remove-item")?.addEventListener("click", () => row.remove());
+  }
+
+  function bindTaxStatus(row) {
+    const sel = row.querySelector(".tax-status-select");
+    const rateSelect = row.querySelector(".tax-rate-select");
+    if (!sel || !rateSelect) return;
+    sel.addEventListener("change", function () {
+      rateSelect.disabled = this.value !== "taxed";
+      if (this.value !== "taxed") rateSelect.value = "";
+    });
+  }
+
+  document.querySelectorAll(".item-row").forEach(row => {
+    bindRemove(row);
+    bindTaxStatus(row);
+  });
+</script>

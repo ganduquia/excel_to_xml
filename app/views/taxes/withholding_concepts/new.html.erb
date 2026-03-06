@@ -1,0 +1,70 @@
+<div class="container py-4" style="max-width:640px">
+
+  <div class="mb-4">
+    <%= link_to taxes_withholding_concepts_path, class: "text-decoration-none text-muted small" do %>
+      <i class="bi bi-arrow-left me-1"></i>Conceptos de retención
+    <% end %>
+    <h3 class="mb-0 fw-bold mt-1"><i class="bi bi-plus-circle me-2 text-primary"></i>Nuevo concepto de retención</h3>
+  </div>
+
+  <% if @concept.errors.any? %>
+    <div class="alert alert-danger">
+      <ul class="mb-0">
+        <% @concept.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= form_with model: @concept, url: taxes_withholding_concepts_path, local: true do |f| %>
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-5">
+            <%= f.label :code, "Código DIAN", class: "form-label fw-semibold" %>
+            <%= f.text_field :code, placeholder: "Ej: 0103-SERV-DEC", class: "form-control" %>
+          </div>
+          <div class="col-md-7">
+            <%= f.label :name, "Nombre", class: "form-label fw-semibold" %>
+            <%= f.text_field :name, placeholder: "Ej: Servicios generales - Declarante", class: "form-control" %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :rate, "Tarifa (%)", class: "form-label fw-semibold" %>
+            <%= f.number_field :rate, min: 0, max: 99, step: 0.01, placeholder: "Ej: 4.0", class: "form-control" %>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :min_amount_cents, "Cuantía mínima (centavos)", class: "form-label fw-semibold" %>
+            <%= f.number_field :min_amount_cents, min: 0, step: 1, class: "form-control" %>
+            <div class="form-text">En centavos. 4 UVT = 21,282,400</div>
+          </div>
+          <div class="col-md-4">
+            <%= f.label :base_type, "Tipo de base", class: "form-label fw-semibold" %>
+            <%= f.select :base_type, [["Bruto","bruto"],["Neto","neto"]], {}, class: "form-select" %>
+          </div>
+          <div class="col-md-6">
+            <%= f.label :taxpayer_type, "Tipo contribuyente", class: "form-label fw-semibold" %>
+            <%= f.select :taxpayer_type,
+                  [["Declarante","declarante"],["No declarante","no_declarante"],
+                   ["Gran contribuyente","gran_contribuyente"],["Todos","todos"]],
+                  { prompt: "Seleccionar..." }, class: "form-select" %>
+          </div>
+          <div class="col-md-3">
+            <%= f.label :effective_from, "Vigente desde", class: "form-label fw-semibold" %>
+            <%= f.date_field :effective_from, class: "form-control" %>
+          </div>
+          <div class="col-md-3">
+            <%= f.label :effective_to, "Vigente hasta", class: "form-label fw-semibold" %>
+            <%= f.date_field :effective_to, class: "form-control" %>
+          </div>
+          <div class="col-12">
+            <%= f.label :notes, "Notas / artículo ET", class: "form-label fw-semibold" %>
+            <%= f.text_area :notes, rows: 2, class: "form-control" %>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-white d-flex gap-2 justify-content-end">
+        <%= link_to "Cancelar", taxes_withholding_concepts_path, class: "btn btn-outline-secondary" %>
+        <%= f.submit "Guardar concepto", class: "btn btn-primary" %>
+      </div>
+    </div>
+  <% end %>
+</div>

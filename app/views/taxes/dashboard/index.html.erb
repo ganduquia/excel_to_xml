@@ -1,0 +1,177 @@
+<div class="container py-4">
+
+  <div class="d-flex align-items-center mb-4">
+    <i class="bi bi-receipt-cutoff fs-2 text-primary me-3"></i>
+    <div>
+      <h2 class="mb-0 fw-bold">Módulo de Impuestos</h2>
+      <small class="text-muted">Colombia 2026 — IVA · Retención en la Fuente</small>
+    </div>
+  </div>
+
+  <% if notice %>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <i class="bi bi-check-circle me-2"></i><%= notice %>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  <% end %>
+
+  <%# ── Tarjetas de resumen ────────────────────────────────────────────── %>
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="fs-1 fw-bold text-primary"><%= @total_documents %></div>
+          <div class="text-muted small">Total documentos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="fs-1 fw-bold text-success"><%= @active_documents %></div>
+          <div class="text-muted small">Liquidados</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="fs-1 fw-bold text-warning"><%= @draft_documents %></div>
+          <div class="text-muted small">Borradores</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body text-center">
+          <div class="fs-1 fw-bold text-secondary"><%= @cancelled_documents %></div>
+          <div class="text-muted small">Cancelados</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Accesos rápidos ────────────────────────────────────────────────── %>
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-file-earmark-text fs-3 text-primary me-3"></i>
+            <div>
+              <h5 class="mb-0">Documentos</h5>
+              <small class="text-muted">Facturas, notas débito/crédito</small>
+            </div>
+          </div>
+          <p class="text-muted small mb-3">Registra facturas de compra y venta, liquida IVA y retenciones automáticamente.</p>
+          <div class="d-flex gap-2">
+            <%= link_to taxes_documents_path, class: "btn btn-sm btn-outline-primary" do %>
+              <i class="bi bi-list me-1"></i>Ver todos
+            <% end %>
+            <%= link_to new_taxes_document_path, class: "btn btn-sm btn-primary" do %>
+              <i class="bi bi-plus-circle me-1"></i>Nuevo
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-percent fs-3 text-primary me-3"></i>
+            <div>
+              <h5 class="mb-0">Tarifas IVA</h5>
+              <small class="text-muted"><%= @total_tax_rates %> tarifas activas</small>
+            </div>
+          </div>
+          <p class="text-muted small mb-3">Parametriza tarifas de IVA (19%, 5%, 0%) y ReteIVA. Vigencias por fecha.</p>
+          <div class="d-flex gap-2">
+            <%= link_to taxes_tax_rates_path, class: "btn btn-sm btn-outline-primary" do %>
+              <i class="bi bi-list me-1"></i>Ver todas
+            <% end %>
+            <%= link_to new_taxes_tax_rate_path, class: "btn btn-sm btn-primary" do %>
+              <i class="bi bi-plus-circle me-1"></i>Nueva
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-bank fs-3 text-primary me-3"></i>
+            <div>
+              <h5 class="mb-0">Retenciones</h5>
+              <small class="text-muted"><%= @total_concepts %> conceptos activos</small>
+            </div>
+          </div>
+          <p class="text-muted small mb-3">Conceptos de retención en la fuente 2026. Tasas y cuantías mínimas por UVT.</p>
+          <div class="d-flex gap-2">
+            <%= link_to taxes_withholding_concepts_path, class: "btn btn-sm btn-outline-primary" do %>
+              <i class="bi bi-list me-1"></i>Ver todos
+            <% end %>
+            <%= link_to new_taxes_withholding_concept_path, class: "btn btn-sm btn-primary" do %>
+              <i class="bi bi-plus-circle me-1"></i>Nuevo
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# ── Documentos recientes ───────────────────────────────────────────── %>
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 fw-semibold"><i class="bi bi-clock-history me-2 text-primary"></i>Documentos recientes</h6>
+      <%= link_to "Ver todos", taxes_documents_path, class: "btn btn-sm btn-outline-primary" %>
+    </div>
+    <div class="card-body p-0">
+      <% if @recent_documents.empty? %>
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+          No hay documentos aún.
+          <%= link_to "Crear el primero", new_taxes_document_path, class: "d-block mt-2" %>
+        </div>
+      <% else %>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Número</th>
+                <th>Tipo</th>
+                <th>Tercero</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @recent_documents.each do |doc| %>
+                <tr>
+                  <td class="fw-semibold"><%= doc.number %></td>
+                  <td><%= t_document_type(doc.document_type) %></td>
+                  <td><%= doc.third_party_name %></td>
+                  <td><%= doc.issue_date&.strftime("%d/%m/%Y") %></td>
+                  <td><%= status_badge(doc.status) %></td>
+                  <td><%= link_to "Ver", taxes_document_path(doc), class: "btn btn-sm btn-outline-secondary" %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="mt-3 text-muted small text-end">
+    <i class="bi bi-info-circle me-1"></i>
+    UVT 2026: <strong>$53,206 COP</strong> &nbsp;·&nbsp;
+    Normativa: ET Arts. 365-401, 437-1, 468, 477 &nbsp;·&nbsp;
+    Decreto 1625/2016
+  </div>
+
+</div>
