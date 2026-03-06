@@ -27,7 +27,8 @@ class Taxes::WithholdingCalculatorTest < ActiveSupport::TestCase
       taxpayer_type:        "declarante",
       is_withholding_agent: true,
       third_party_autoretainer: false,
-      currency:             "COP"
+      currency:             "COP",
+      withholding_concept:  @concept_servicios
     )
 
     DocumentItem.create!(

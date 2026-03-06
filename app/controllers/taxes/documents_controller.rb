@@ -13,7 +13,7 @@ module Taxes
     def new
       @document = TaxDocument.new(issue_date: Date.today, currency: "COP")
       @document.document_items.build
-      @tax_rates = TaxRate.where(tax_type: "iva", active: true).order(:rate)
+      load_form_options
     end
 
     def create
@@ -21,7 +21,7 @@ module Taxes
       if @document.save
         redirect_to taxes_document_path(@document), notice: "Documento creado correctamente."
       else
-        @tax_rates = TaxRate.where(tax_type: "iva", active: true).order(:rate)
+        load_form_options
         render :new, status: :unprocessable_entity
       end
     end
@@ -63,12 +63,18 @@ module Taxes
       redirect_to taxes_documents_path, alert: "Documento no encontrado."
     end
 
+    def load_form_options
+      @tax_rates          = TaxRate.where(tax_type: "iva", active: true).order(:rate)
+      @withholding_concepts = WithholdingConcept.where(active: true).order(:code)
+    end
+
     def document_params
       params.require(:tax_document).permit(
         :document_type, :number, :issue_date,
         :third_party_nit, :third_party_name,
         :taxpayer_type, :is_withholding_agent,
         :third_party_autoretainer, :currency, :notes,
+        :withholding_concept_id,
         document_items_attributes: %i[
           id description quantity unit_price_cents
           discount_cents tax_status tax_rate_id _destroy

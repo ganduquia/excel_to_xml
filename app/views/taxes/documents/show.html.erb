@@ -60,6 +60,16 @@
             <dd class="col-7"><%= @document.currency %></dd>
             <dt class="col-5 text-muted">Notas</dt>
             <dd class="col-7"><%= @document.notes.presence || "—" %></dd>
+            <dt class="col-5 text-muted">Concepto retención</dt>
+            <dd class="col-7">
+              <% if @document.withholding_concept %>
+                <span class="badge bg-primary"><%= @document.withholding_concept.code %></span>
+                <small class="ms-1"><%= @document.withholding_concept.name %></small>
+                <span class="text-muted ms-1">(<%= @document.withholding_concept.rate %>%)</span>
+              <% else %>
+                <span class="text-muted fst-italic">Sin retención asignada</span>
+              <% end %>
+            </dd>
           </dl>
         </div>
       </div>

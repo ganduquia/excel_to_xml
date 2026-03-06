@@ -6,10 +6,11 @@ class TaxDocument < ApplicationRecord
   ].freeze
   STATUSES = %w[draft active cancelled].freeze
 
-  has_many :document_items,  dependent: :destroy
-  has_many :tax_lines,       dependent: :destroy
-  belongs_to :original_document, class_name: "TaxDocument", optional: true
-  has_many  :derived_documents,  class_name: "TaxDocument", foreign_key: :original_document_id
+  has_many   :document_items,      dependent: :destroy
+  has_many   :tax_lines,           dependent: :destroy
+  belongs_to :original_document,   class_name: "TaxDocument", optional: true
+  has_many   :derived_documents,   class_name: "TaxDocument", foreign_key: :original_document_id
+  belongs_to :withholding_concept, optional: true
 
   accepts_nested_attributes_for :document_items, allow_destroy: true
 

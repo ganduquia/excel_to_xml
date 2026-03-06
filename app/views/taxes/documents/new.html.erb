@@ -55,6 +55,21 @@
             <%= f.text_area :notes, rows: 2, placeholder: "Observaciones opcionales...",
                   class: "form-control" %>
           </div>
+          <div class="col-12">
+            <%= f.label :withholding_concept_id, "Concepto de retención en la fuente", class: "form-label fw-semibold" %>
+            <%= f.select :withholding_concept_id,
+                  @withholding_concepts.map { |c|
+                    ["#{c.code} — #{c.name} (#{c.rate}% · mín. #{number_to_currency(c.min_amount_cents / 100.0, unit: '$', separator: ',', delimiter: '.')})", c.id]
+                  },
+                  { include_blank: "— Sin retención / seleccionar después —" },
+                  class: "form-select" %>
+            <div class="form-text">
+              <i class="bi bi-info-circle me-1"></i>
+              Selecciona el concepto según el tipo de operación (compra, servicio, honorario, etc.).
+              Solo se aplicará <strong>un concepto</strong> por documento.
+              Déjalo vacío si la operación no tiene retención.
+            </div>
+          </div>
         </div>
       </div>
     </div>

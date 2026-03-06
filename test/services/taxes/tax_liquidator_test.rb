@@ -26,7 +26,8 @@ class Taxes::TaxLiquidatorTest < ActiveSupport::TestCase
       third_party_name:     "Proveedor Tech S.A.S.",
       taxpayer_type:        "declarante",
       is_withholding_agent: true,
-      currency:             "COP"
+      currency:             "COP",
+      withholding_concept:  @concept
     )
 
     DocumentItem.create!(

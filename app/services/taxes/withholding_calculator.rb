@@ -11,25 +11,20 @@ module Taxes
       @policy   = TaxApplicabilityPolicy.new(document)
     end
 
-    # Devuelve array de TaxLine (no persistidos) con todas las retenciones aplicables
+    # Devuelve array de TaxLine (no persistidos).
+    # Si el documento tiene un concepto seleccionado, aplica solo ese.
+    # Si no tiene concepto, no calcula retención.
     def call
       return [] unless policy.apply_withholding?
+      return [] unless document.withholding_concept.present?
 
-      lines = []
-      base  = taxable_base_cents
+      base    = taxable_base_cents
+      concept = document.withholding_concept
+      lines   = []
 
-      concepts = WithholdingConcept.applicable_on(
-        document.issue_date,
-        taxpayer_type: document.taxpayer_type
-      )
-
-      concepts.each do |concept|
-        next if base < concept.min_amount_cents
-
+      if base >= concept.min_amount_cents
         amount = (base * concept.rate / 100.0).round
-        next if amount.zero?
-
-        lines << build_withholding_line(concept, base, amount)
+        lines << build_withholding_line(concept, base, amount) if amount > 0
       end
 
       lines += build_reteiva_lines if policy.apply_reteiva?
