@@ -25,12 +25,13 @@ module Taxes
 
       if @item.update(new_attrs)
         save_audit_log(old_values)
-        Taxes::ReconciliationPropagator.new(@item.reconciliation_period, @item).call
-        redirect_to taxes_reconciliation_path(@item.reconciliation_period),
+        redirect_to taxes_reconciliation_path(@item.reconciliation_period,
+                                              filter: params[:filter], q: params[:q]),
                     notice: "#{@item.account_code} — #{@item.account_name.truncate(40)} conciliada."
       else
         redirect_to taxes_reconciliation_path(@item.reconciliation_period,
-                                              edit_item: @item.id),
+                                              edit_item: @item.id,
+                                              filter: params[:filter], q: params[:q]),
                     alert: @item.errors.full_messages.join(". ")
       end
     end

@@ -56,18 +56,20 @@ module Taxes
         )
       end
 
-      # 3. Importar filas de datos
+      # 3. Importar SOLO filas de nivel Auxiliar
       first_data_row = header_row_idx + 1
       (first_data_row..sheet.last_row).each do |i|
         row = sheet.row(i)
         next if row.compact.empty?
 
+        nivel = row[mapping[:account_type]].to_s.strip
+        # Saltar todo lo que no sea Auxiliar (Clase, Grupo, Cuenta, SubCuenta)
+        next unless nivel.downcase == "auxiliar"
+
         raw_code = row[mapping[:account_code]]
         # Los códigos numéricos llegan como Float (1101.0); convertir a entero antes de stringify
         code = raw_code.is_a?(Numeric) ? raw_code.to_i.to_s : raw_code.to_s.strip
         next if code.blank?
-
-        nivel = row[mapping[:account_type]].to_s.strip
 
         attrs = {
           account_type:          nivel,

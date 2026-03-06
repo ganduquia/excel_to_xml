@@ -25,10 +25,11 @@ module Taxes
     end
 
     def show
-      @items = @period.reconciliation_items.order(
-        Arel.sql("LENGTH(account_code) ASC, account_code ASC")
-      )
+      @items = @period.reconciliation_items
+                      .where(account_type: "Auxiliar")
+                      .order(:account_code)
       @items = apply_filter(@items)
+      @items = apply_search(@items)
 
       @stats        = build_stats
       @editing_item = load_editing_item
@@ -105,16 +106,17 @@ module Taxes
 
     def apply_filter(scope)
       case params[:filter]
-      when "auxiliar_pending"
-        scope.where(account_type: "Auxiliar", review_status: "pending")
-      when "auxiliar_effect"
-        scope.where(account_type: "Auxiliar", has_fiscal_effect: true)
-             .where.not(fiscal_adjustment_cents: 0)
-      when "auxiliar_deferred"
-        scope.where(account_type: "Auxiliar", applies_deferred_tax: true)
-      else
-        scope
+      when "auxiliar_pending"  then scope.where(review_status: "pending")
+      when "auxiliar_effect"   then scope.where(has_fiscal_effect: true).where.not(fiscal_adjustment_cents: 0)
+      when "auxiliar_deferred" then scope.where(applies_deferred_tax: true)
+      else scope
       end
+    end
+
+    def apply_search(scope)
+      return scope if params[:q].blank?
+      term = "%#{params[:q]}%"
+      scope.where("account_code LIKE :t OR account_name LIKE :t", t: term)
     end
 
     def build_stats
