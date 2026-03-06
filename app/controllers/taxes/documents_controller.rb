@@ -10,6 +10,20 @@ module Taxes
                      .page(params[:page]).per(10)
     end
 
+    def export
+      filter    = DocumentFilter.new(params)
+      documents = filter.apply(TaxDocument.includes(:withholding_concept))
+                        .order(issue_date: :desc, id: :desc)
+
+      filename = "documentos_impuestos_#{Date.today.strftime('%Y%m%d')}.xlsx"
+      xlsx     = Taxes::DocumentsExcelExporter.new(documents).generate
+
+      send_data xlsx,
+                filename:    filename,
+                type:        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                disposition: "attachment"
+    end
+
     def show
       @tax_lines = @document.tax_lines.includes(:withholding_concept)
     end

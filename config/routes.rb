@@ -13,6 +13,7 @@ Rails.application.routes.draw do
     root to: "dashboard#index"
 
     resources :documents, only: %i[index show new create destroy] do
+      collection { get :export }
       member do
         post :liquidate
         post :cancel
